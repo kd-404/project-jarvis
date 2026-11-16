@@ -1,0 +1,1 @@
+{ "name": "kacy-desk", "version": "0.1.0", "private": true, "description": "Kacy: a voice and gesture driven 3D engineering desk on top of Claude Code", "scripts": { "start": "node kacy.js", "test": "node test/engine.test.js" } }

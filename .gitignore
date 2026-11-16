@@ -1,0 +1,6 @@
+kacy.log
+node_modules/
+.DS_Store
+.kacy/
+*.pyc
+__pycache__/

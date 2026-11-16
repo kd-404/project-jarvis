@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kacy Desk</title>
+<style>
+  :root { --bg:#04070c; --ink:#d4ecf7; --dim:#5d7b92; --line:#16303f; --cy:#5fe3ff; --am:#ffb547; --rd:#ff5468; --gn:#7dffb0; --panel:rgba(6,14,22,.78);
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font:12px/1.5 var(--mono); overflow:hidden; }
+  canvas#bench { position:fixed; inset:0; width:100%; height:100%; display:block; cursor:grab; }
+  canvas#bench:active { cursor:grabbing; }
+  button, input, select { font:inherit; color:inherit; }
+  button { background:transparent; border:1px solid var(--line); padding:5px 10px; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; font-size:11px; }
+  button:hover { border-color:var(--cy); color:var(--cy); }
+  button.on { border-color:var(--cy); color:var(--cy); background:rgba(95,227,255,.09); }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline:1px solid var(--cy); outline-offset:2px; }
+  button#stop { border-color:rgba(255,84,104,.6); color:var(--rd); }
+  button#stop:hover { background:rgba(255,84,104,.14); }
+  .panel { position:fixed; background:var(--panel); border:1px solid var(--line); backdrop-filter:blur(6px); }
+  .panel::before, .panel::after { content:""; position:absolute; width:10px; height:10px; border:1px solid var(--cy); opacity:.8; }
+  .panel::before { top:-1px; left:-1px; border-right:0; border-bottom:0; }
+  .panel::after { bottom:-1px; right:-1px; border-left:0; border-top:0; }
+  h2 { margin:0; padding:8px 12px; font-size:10px; font-weight:600; letter-spacing:.22em; color:var(--dim); border-bottom:1px solid var(--line); display:flex; justify-content:space-between; }
+  h2 b { color:var(--cy); font-weight:600; }
+
+  header { top:12px; left:12px; right:12px; height:46px; display:flex; align-items:center; gap:10px; padding:0 12px; }
+  #orb { width:22px; height:22px; border-radius:50%; border:1px solid var(--cy); position:relative; flex:none; }
+  #orb::after { content:""; position:absolute; inset:5px; border-radius:50%; background:var(--cy); opacity:.35; transition:all .25s; }
+  body[data-state=listening] #orb::after { inset:2px; opacity:.95; }
+  body[data-state=thinking] #orb { border-color:var(--am); animation:spin 1.2s linear infinite; border-top-color:transparent; }
+  body[data-state=thinking] #orb::after { background:var(--am); }
+  body[data-state=speaking] #orb::after { animation:pulse .5s ease-in-out infinite alternate; opacity:.9; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @keyframes pulse { from { inset:6px; } to { inset:1px; } }
+  #brand { font-size:15px; letter-spacing:.42em; font-weight:700; color:var(--cy); }
+  #state { color:var(--dim); letter-spacing:.1em; text-transform:uppercase; font-size:10px; min-width:110px; }
+  #project { background:transparent; border:1px solid var(--line); padding:5px 8px; max-width:210px; }
+  #project option { background:#07111a; }
+  .grow { flex:1; }
+  #meter { color:var(--dim); font-size:10px; letter-spacing:.1em; white-space:nowrap; }
+
+  #codeRail { top:70px; left:12px; bottom:74px; width:310px; display:flex; flex-direction:column; }
+  #sideRail { top:70px; right:12px; bottom:74px; width:290px; display:flex; flex-direction:column; }
+  .scroll { overflow:auto; flex:1; min-height:0; scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
+  .entry { border-bottom:1px solid var(--line); padding:8px 12px; }
+  .entry .f { display:flex; justify-content:space-between; gap:8px; color:var(--cy); font-size:11px; }
+  .entry .f span:last-child { color:var(--am); font-size:9px; letter-spacing:.15em; text-transform:uppercase; flex:none; }
+  .entry pre { margin:6px 0 0; white-space:pre-wrap; word-break:break-word; color:#a9cadb; font:11px/1.45 var(--mono); max-height:190px; overflow:hidden; }
+  .entry.run pre { color:var(--gn); }
+  .entry.note pre { color:var(--ink); max-height:none; font-size:11.5px; }
+  .empty { padding:14px 12px; color:var(--dim); }
+  .acts { flex:1 1 0; min-height:110px; overflow:auto; scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
+  #sideRail .acts { flex:0 0 30%; } #sideRail h2.mid { border-top:1px solid var(--line); }
+  .lane[data-lane=system] > h2:first-child { color:var(--cy); } .lane[data-lane=project] > h2:first-child { color:var(--am); }
+  .lane[data-lane=project] { border-color:rgba(255,181,71,.28); } .lane[data-lane=project]::before, .lane[data-lane=project]::after { border-color:var(--am); }
+  .lane > h2:first-child b { font-weight:500; letter-spacing:.08em; text-transform:none; }
+  .lane[data-lane=project] > h2:first-child b { color:var(--am); }
+  .lane.busy > h2:first-child { background:linear-gradient(90deg, transparent, rgba(95,227,255,.14), transparent); background-size:200% 100%; animation:sweep 1.4s linear infinite; }
+  .lane[data-lane=project].busy > h2:first-child { background-image:linear-gradient(90deg, transparent, rgba(255,181,71,.16), transparent); }
+  @keyframes sweep { from { background-position:200% 0; } to { background-position:-200% 0; } }
+  .laneSub { padding:5px 12px; color:var(--dim); font-size:9.5px; letter-spacing:.1em; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:8px; }
+  .lane[data-lane=project] .act::before { color:var(--am); } .lane[data-lane=project] .act.kacy { color:var(--am); }
+  #panel { top:70px; right:314px; width:330px; max-height:calc(100% - 160px); display:none; flex-direction:column; z-index:5; }
+  #panel.show { display:flex; } #panel .body { padding:4px 14px 14px; overflow:auto; scrollbar-width:thin; }
+  #panel h4 { margin:14px 0 6px; font-size:9px; letter-spacing:.2em; color:var(--cy); font-weight:600; }
+  #panel label { display:grid; grid-template-columns:1fr auto; gap:3px 8px; align-items:center; margin-bottom:9px; color:var(--ink); }
+  #panel label small { grid-column:1 / -1; color:var(--dim); font-size:9.5px; margin-top:-3px; }
+  #panel select { grid-column:1 / -1; background:#07111a; border:1px solid var(--line); padding:5px 6px; }
+  #panel input[type=range] { grid-column:1 / -1; width:100%; accent-color:var(--cy); }
+  #panel output { color:var(--am); font-size:10px; } #panel label.check { display:flex; gap:8px; align-items:flex-start; } #panel .note { color:var(--dim); font-size:10px; margin:2px 0 0; }
+  body::after { content:""; position:fixed; inset:0; pointer-events:none; background:repeating-linear-gradient(0deg, rgba(95,227,255,.022) 0 1px, transparent 1px 3px), radial-gradient(ellipse at 50% 55%, transparent 35%, rgba(0,0,0,.55) 100%); z-index:0; }
+  .panel, #telemetry, #hint { z-index:2; }
+  .act { padding:4px 12px 4px 30px; position:relative; color:#a9cadb; border-bottom:1px solid rgba(22,48,63,.5); word-break:break-word; }
+  .act::before { content:"›"; position:absolute; left:12px; color:var(--cy); }
+  .act time { float:right; color:#33506a; font-size:9px; margin-left:8px; }
+  .act.you { color:var(--ink); } .act.you::before { content:"●"; color:var(--gn); font-size:8px; top:7px; }
+  .act.kacy { color:var(--cy); } .act.kacy::before { content:"◆"; font-size:8px; top:7px; }
+  .act.think::before { content:"…"; color:var(--am); } .act.fail { color:#ffb3bd; } .act.fail::before { content:"×"; color:var(--rd); }
+  .act.done { color:var(--gn); } .act.done::before { content:"✓"; color:var(--gn); }
+  .act.live { background:rgba(255,181,71,.08); } .act.live::after { content:""; display:inline-block; width:6px; height:6px; margin-left:8px; border-radius:50%; background:var(--am); animation:blink .8s ease-in-out infinite alternate; }
+  @keyframes blink { from { opacity:.2; } to { opacity:1; } }
+  #state { max-width:300px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .commit { padding:7px 12px; border-bottom:1px solid var(--line); display:grid; grid-template-columns:auto 1fr; gap:2px 9px; }
+  .commit code { color:var(--gn); font-size:11px; }
+  .commit small { grid-column:2; color:var(--dim); font-size:10px; }
+  .sec { flex:none; max-height:30%; display:flex; flex-direction:column; border-top:1px solid var(--line); }
+  .job { padding:7px 12px; border-bottom:1px solid var(--line); }
+  .job time { color:var(--am); display:block; font-size:10px; letter-spacing:.08em; }
+  .job .row { display:flex; gap:6px; margin-top:5px; }
+  .job button { padding:2px 7px; font-size:9px; }
+  .job code { display:block; margin-top:4px; padding:4px 6px; background:rgba(255,84,104,.08); border:1px dashed rgba(255,84,104,.4); color:#ffc3cb; word-break:break-all; }
+  .job.off { opacity:.45; }
+
+  #inspector { left:334px; bottom:74px; width:370px; max-height:calc(100% - 160px); display:none; flex-direction:column; }
+  #inspector.show { display:flex; }
+  #inspector .body { padding:10px 12px; overflow:auto; scrollbar-width:thin; }
+  #inspector h4 { margin:12px 0 4px; font-size:9px; letter-spacing:.2em; color:var(--dim); font-weight:600; }
+  #inspector .wire { padding:5px 7px; border-left:2px solid var(--cy); margin-bottom:5px; cursor:pointer; background:rgba(95,227,255,.04); }
+  #inspector .wire:hover { background:rgba(95,227,255,.11); }
+  #inspector .wire b { color:var(--ink); font-weight:600; } #inspector .wire i { color:var(--am); font-style:normal; font-size:10px; }
+  #inspector .wire code { display:block; color:var(--gn); font-size:11px; margin-top:2px; word-break:break-all; }
+  #inspector .wire small { color:var(--dim); text-decoration:underline; }
+  #inspector .wire small:hover { color:var(--cy); }
+  #inspector .files a { display:inline-block; margin-right:10px; }
+  #inspector pre { margin:6px 0 0; max-height:220px; overflow:auto; font:11px/1.5 var(--mono); color:#a9cadb; background:rgba(0,0,0,.35); padding:6px 0; scrollbar-width:thin; white-space:pre; }
+  #inspector pre em { display:inline-block; width:30px; text-align:right; margin-right:10px; color:#33506a; font-style:normal; user-select:none; }
+  #inspector pre .hit { background:rgba(255,181,71,.2); display:inline-block; min-width:100%; }
+  #inspector .row { display:flex; gap:6px; margin-top:10px; }
+  #inspector h3 { margin:0 0 2px; font-size:14px; letter-spacing:.06em; color:var(--cy); }
+  #inspector .meta { color:var(--am); font-size:10px; letter-spacing:.16em; text-transform:uppercase; }
+  #inspector p { margin:8px 0; color:#a9cadb; }
+  #inspector a { color:var(--ink); display:block; cursor:pointer; text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:3px; }
+  #inspector a:hover { color:var(--cy); }
+
+  footer { left:12px; right:12px; bottom:12px; height:50px; display:flex; align-items:center; gap:10px; padding:0 12px; }
+  #heard { color:var(--dim); max-width:44%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #said { color:var(--ink); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #cmd { flex:0 0 34%; background:rgba(95,227,255,.05); border:1px solid var(--line); padding:8px 10px; }
+  #cmd::placeholder { color:var(--dim); }
+
+  #camBox { right:314px; bottom:74px; width:200px; height:150px; display:none; overflow:hidden; }
+  #camBox.show { display:block; }
+  #cam { display:none; }
+  #camfx { width:100%; height:100%; display:block; }
+  #camBox span { position:absolute; left:8px; top:6px; font-size:9px; letter-spacing:.18em; color:var(--cy); }
+
+  #telemetry { position:fixed; left:346px; top:78px; color:var(--dim); font-size:10px; letter-spacing:.14em; line-height:1.9; pointer-events:none; text-transform:uppercase; }
+  #telemetry b { color:var(--cy); font-weight:500; }
+  #hint { position:fixed; right:314px; top:78px; color:var(--dim); font-size:10px; letter-spacing:.1em; text-align:right; line-height:1.9; pointer-events:none; }
+  #demoTag { display:none; color:var(--am); border:1px solid var(--am); padding:2px 7px; font-size:9px; letter-spacing:.2em; }
+  body.demo #demoTag { display:inline-block; }
+  @media (max-width: 980px) { #codeRail { width:230px; } #sideRail { display:none; } #panel { right:12px; } #hint { right:12px; } #telemetry { left:254px; } #inspector { left:254px; } #heard { display:none; } }
+  @media (max-width: 640px) { #codeRail, #telemetry, #hint, #meter, #state { display:none; } #inspector { left:12px; right:12px; width:auto; } #cmd { flex:1; } #said { display:none; } }
+  @media (prefers-reduced-motion: reduce) { #orb, #orb::after { animation:none !important; } }
+</style>
+</head>
+<body data-state="idle">
+<canvas id="bench" aria-label="3D project desk"></canvas>
+
+<header class="panel">
+  <div id="orb"></div><div id="brand">KACY</div><div id="state">standing by</div>
+  <span id="demoTag">PREVIEW</span>
+  <select id="project" aria-label="Project"></select>
+  <div class="grow"></div>
+  <div id="meter"></div>
+  <button id="cfg" title="Models, air mouse sensitivity, clap">Controls</button>
+  <button id="mic" title="Wake word listening">Voice</button>
+  <button id="hands" title="Hand gestures through the camera">Gestures</button>
+  <button id="air" class="on" title="With gestures on, your hand moves the real Mac cursor everywhere. Off = pointer only inside the desk">Air mouse</button>
+  <button id="ctl" title="Whether Kacy may use the mouse and keyboard">Hands</button>
+  <button id="boom" title="Exploded view (E)">Explode</button>
+  <button id="stop" title="Stop everything (Esc)">Stop</button>
+</header>
+
+<aside id="codeRail" class="panel lane" data-lane="system">
+  <h2>SYSTEM LANE <b id="mS"></b></h2><div class="laneSub">Mac control · quick answers · instant commands<span id="uS"></span></div>
+  <div id="actsS" class="acts"><div class="empty">Opening apps, clicking, playing music and quick questions run here, on the small fast model.</div></div>
+  <div class="sec"><h2>SCHEDULE</h2><div class="scroll" id="schedule"><div class="empty">No scheduled tasks.</div></div></div>
+  <div class="sec"><h2>YOUR HANDS ONLY</h2><div class="scroll" id="handoffs"><div class="empty">Kacy never deletes. Removals wait here for you.</div></div></div>
+</aside>
+
+<aside id="sideRail" class="panel lane" data-lane="project">
+  <h2>PROJECT LANE <b id="mP"></b></h2><div class="laneSub">research · building<span id="uP"></span></div>
+  <div id="actsP" class="acts"><div class="empty">Research and builds run here on the strong model, in parallel with the system lane.</div></div>
+  <h2 class="mid">WORK STREAM <b id="codeN"></b></h2><div class="scroll" id="code"><div class="empty">Code, notes and research appear here as Kacy works.</div></div>
+  <div class="sec"><h2>COMMITS <b id="dirty"></b></h2><div class="scroll" id="commits"><div class="empty">No commits yet.</div></div></div>
+</aside>
+
+<div id="panel" class="panel">
+  <h2>CONTROLS <button id="panelX" style="border:0;padding:0">close</button></h2>
+  <div class="body">
+    <h4>MODELS · which brain does what</h4>
+    <label>System lane <small>Mac control, quick answers</small><select id="selS"></select></label>
+    <label>Project lane <small>research, building</small><select id="selP"></select></label>
+    <label>Routing <small>who decides the lane</small><select id="selMode"><option value="auto">Automatic (recommended)</option><option value="system">Everything on the system model</option><option value="project">Everything on the project model</option></select></label>
+    <p class="note">Instant commands (open, play, volume, click, time) use no model at all.</p>
+    <h4>AIR MOUSE</h4>
+    <label>Cursor speed <output id="oSpeed"></output><input id="rSpeed" type="range" min="0.5" max="3" step="0.1"></label>
+    <label>Steadiness <output id="oSmooth"></output><input id="rSmooth" type="range" min="0" max="0.9" step="0.05"></label>
+    <label>Pinch sensitivity <output id="oPinch"></output><input id="rPinch" type="range" min="0.2" max="0.55" step="0.01"></label>
+    <label>Hold to drag <output id="oHold"></output><input id="rHold" type="range" min="250" max="900" step="50"></label>
+    <h4>CLAP</h4>
+    <label class="check"><input id="cClap" type="checkbox"> Double clap turns gestures and the air mouse on or off</label>
+    <label>Clap loudness needed <output id="oClap"></output><input id="rClap" type="range" min="0.1" max="0.8" step="0.05"></label>
+  </div>
+</div>
+
+<div id="inspector" class="panel"><h2>PART <button id="insX" style="border:0;padding:0">close</button></h2><div class="body" id="insBody"></div></div>
+<div id="camBox" class="panel"><video id="cam" playsinline muted></video><canvas id="camfx" width="200" height="150"></canvas><span id="camLbl">HANDS</span></div>
+<div id="telemetry"></div>
+<div id="hint">double clap = gestures on / off · finger = mouse · quick pinch = click · held pinch = drag<br>two fingers = scroll · open hand: swipe = desktops, hold = all windows, then fist = back<br>E explode · Space = talk now · Esc stop</div>
+
+<footer class="panel">
+  <div id="heard"></div><div id="said">Say “Kacy”, or type below.</div>
+  <input id="cmd" placeholder="Ask Kacy anything…" autocomplete="off" aria-label="Command">
+</footer>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const S = { graph: { name: '', parts: [], links: [] }, project: null, hangar: [], commits: [], dirty: 0, schedule: [], handoffs: [], control: 'hands', brain: { online: true }, demo: false, cost: 0, tokens: 0 };
+
+/* ───────────────────────── 3D wireframe bench (no libraries) ───────────────────────── */
+const cv = $('bench'), ctx = cv.getContext('2d');
+const cam = { yaw: 0.6, pitch: 0.42, dist: 22, tDist: 22, explode: 0, tExplode: 0, auto: true, fx: 0, fy: 0, fz: 0, fit: 22, cx: 0.5 };
+let W = 0, H = 0, DPR = 1, T = 0;
+function resize() { DPR = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0); }
+addEventListener('resize', resize); resize();
+
+function proj(x, y, z) {
+  x -= cam.fx; y -= cam.fy; z -= cam.fz;
+  const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw), cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  const x1 = x * cy - z * sy, z1 = x * sy + z * cy;
+  const y2 = y * cp - z1 * sp, z2 = y * sp + z1 * cp;
+  const d = z2 + cam.dist; if (d < 0.5) return null;
+  const f = Math.min(W, H) * 1.05 / d;
+  return [W * cam.cx + x1 * f, H * 0.52 - y2 * f, d, f];
+}
+// mesh helpers: every shape is a list of segments [ax,ay,az,bx,by,bz]
+const ring = (r, y, n = 20) => { const s = []; for (let i = 0; i < n; i++) { const a = i / n * 6.2832, b = (i + 1) / n * 6.2832; s.push([Math.cos(a) * r, y, Math.sin(a) * r, Math.cos(b) * r, y, Math.sin(b) * r]); } return s; };
+const vring = (r, rot, n = 20) => { const s = [], c = Math.cos(rot), q = Math.sin(rot); for (let i = 0; i < n; i++) { const a = i / n * 6.2832, b = (i + 1) / n * 6.2832; s.push([Math.cos(a) * r * c, Math.sin(a) * r, Math.cos(a) * r * q, Math.cos(b) * r * c, Math.sin(b) * r, Math.cos(b) * r * q]); } return s; };
+const poly = (n, r, y, rot = 0) => { const p = []; for (let i = 0; i < n; i++) { const a = rot + i / n * 6.2832; p.push([Math.cos(a) * r, y, Math.sin(a) * r]); } return p; };
+const loop = (p) => p.map((a, i) => [...a, ...p[(i + 1) % p.length]]);
+const join = (a, b) => a.map((p, i) => [...p, ...b[i]]);
+const prism = (n, r0, r1, y0, y1, rot = 0) => { const a = poly(n, r0, y0, rot), b = poly(n, r1, y1, rot); return [...loop(a), ...loop(b), ...join(a, b)]; };
+const octa = (r) => { const e = poly(4, r, 0), t = [0, r, 0], b = [0, -r, 0]; return [...loop(e), ...e.map((p) => [...p, ...t]), ...e.map((p) => [...p, ...b])]; };
+const gear = (r, y, teeth = 10) => { const p = []; for (let i = 0; i < teeth * 2; i++) { const a = i / (teeth * 2) * 6.2832, rr = i % 2 ? r : r * 0.78; p.push([Math.cos(a) * rr, y, Math.sin(a) * rr]); } return loop(p); };
+const Q = Math.PI / 4;
+// each model is a stack of layers; the exploded view pulls the layers apart
+const MODELS = {
+  llm: () => [{ s: [...ring(0.62, -0.78), ...ring(1, 0), ...ring(0.62, 0.78), ...vring(1, 0), ...vring(1, 1.57)] }, { s: [...octa(0.42), ...vring(0.62, 0.5, 14)], spin: 1.6 }, { s: ring(1.3, 0, 28), spin: -0.4 }],
+  agent: () => [{ s: octa(0.92) }, { s: [...ring(1.3, 0, 22), [1.3, 0, 0, 1.55, 0, 0], [-1.3, 0, 0, -1.55, 0, 0]], spin: 1.1 }, { s: prism(4, 0.3, 0.3, 1.1, 1.3, Q) }],
+  database: () => [{ s: prism(14, 0.85, 0.85, -0.8, -0.3) }, { s: prism(14, 0.85, 0.85, -0.2, 0.3) }, { s: prism(14, 0.85, 0.85, 0.4, 0.9) }],
+  encoder: () => [{ s: prism(4, 1.15, 0.72, -0.7, 0, Q) }, { s: prism(4, 0.72, 0.38, 0.05, 0.7, Q) }, { s: ring(0.3, 0.95, 10), spin: 2 }],
+  retriever: () => [{ s: prism(12, 0.25, 1.05, -0.5, 0.25) }, { s: [...ring(0.7, 0.25, 14), [0, -0.5, 0, 0, 0.9, 0]] }, { s: octa(0.2).map((g) => g.map((v, i) => i % 3 === 1 ? v + 0.9 : v)), spin: 2.2 }],
+  api: () => [{ s: prism(6, 0.95, 0.95, -0.3, 0.3) }, { s: [...prism(6, 0.5, 0.5, 0.3, 0.55), [0.95, 0, 0, 1.6, 0, 0], [-0.95, 0, 0, -1.6, 0, 0], [0, 0, 0.95, 0, 0, 1.6], [0, 0, -0.95, 0, 0, -1.6]] }],
+  tool: () => [{ s: prism(4, 1, 1, -0.6, 0.1, Q) }, { s: [...prism(4, 0.55, 0.55, 0.2, 0.75, Q), [0, 0.75, 0, 0, 1.2, 0]] }],
+  ui: () => [{ s: [...prism(4, 0.5, 0.5, -0.85, -0.75, Q), [0, -0.75, 0, 0, -0.45, 0]] }, { s: [[-1.1, -0.45, 0, 1.1, -0.45, 0], [1.1, -0.45, 0, 1.1, 0.85, 0], [1.1, 0.85, 0, -1.1, 0.85, 0], [-1.1, 0.85, 0, -1.1, -0.45, 0], [-0.9, 0.6, 0, 0.3, 0.6, 0], [-0.9, 0.35, 0, 0.8, 0.35, 0], [-0.9, 0.1, 0, 0.1, 0.1, 0]] }],
+  data: () => [{ s: prism(4, 1.05, 1.05, -0.6, -0.42, Q) }, { s: prism(4, 1.05, 1.05, -0.12, 0.06, Q) }, { s: prism(4, 1.05, 1.05, 0.36, 0.54, Q) }],
+  trainer: () => [{ s: [...ring(0.5, -0.5, 12), ...ring(0.5, 0.5, 12), [0, -0.9, 0, 0, 0.9, 0]] }, { s: [...gear(1.15, 0, 12), ...ring(0.6, 0, 12)], spin: 1.4 }, { s: gear(0.8, 0.75, 8), spin: -2 }],
+  sensor: () => [{ s: prism(3, 0.95, 0.05, -0.6, 0.8) }, { s: ring(1.1, -0.6, 18), spin: 0.8 }],
+  actuator: () => [{ s: prism(10, 0.55, 0.55, -0.8, 0.2) }, { s: gear(1.05, 0.45, 9), spin: 1.8 }],
+  service: () => [{ s: prism(4, 0.95, 0.95, -0.65, 0.65, Q) }, { s: ring(1.25, 0, 22), spin: 0.6 }],
+  generic: () => [{ s: prism(4, 0.9, 0.9, -0.6, 0.6, Q) }],
+};
+const TYPE_Y = { ui: 1.6, api: 0.9, agent: 0.5, llm: 0, encoder: -0.2, retriever: 0.2, tool: 0.4, service: 0.3, trainer: -0.6, data: -1.2, database: -1.4, sensor: 1, actuator: -0.4, generic: 0 };
+const COLORS = { planned: '#3f6f8a', building: '#ffb547', ready: '#5fe3ff', error: '#ff5468', retired: '#3a4854' };
+const DUST = Array.from({ length: 80 }, () => { const a = Math.random() * 6.2832, r = 3 + Math.random() * 21; return { x: Math.cos(a) * r, z: Math.sin(a) * r, y: -3 + Math.random() * 13, v: 0.15 + Math.random() * 0.5 }; });
+const view = new Map(); // id -> {x,y,z,tx,ty,tz,born,model,type,flash}
+
+function layout() {
+  const parts = S.graph.parts, links = S.graph.links;
+  for (const id of [...view.keys()]) if (!parts.find((p) => p.id === id)) view.delete(id);
+  if (!parts.length) return;
+  const adj = {}; parts.forEach((p) => (adj[p.id] = []));
+  links.forEach((l) => { if (adj[l.from] && adj[l.to]) { adj[l.from].push(l.to); adj[l.to].push(l.from); } });
+  const core = parts.find((p) => p.type === 'llm') || [...parts].sort((a, b) => adj[b.id].length - adj[a.id].length)[0];
+  const depth = { [core.id]: 0 }, q = [core.id];
+  while (q.length) { const id = q.shift(); for (const n of adj[id]) if (!(n in depth)) { depth[n] = depth[id] + 1; q.push(n); } }
+  const maxD = Math.max(0, ...Object.values(depth));
+  const rings = {}; parts.forEach((p) => { const d = p.id in depth ? depth[p.id] : maxD + 1; (rings[d] = rings[d] || []).push(p); });
+  let maxR = 3;
+  for (const d of Object.keys(rings).map(Number)) {
+    const list = rings[d], r = d === 0 ? 0 : Math.max(d * 5.2, list.length * 4.4 / 6.2832);
+    maxR = Math.max(maxR, r);
+    list.forEach((p, i) => {
+      const a = i / list.length * 6.2832 + d * 0.7;
+      let v = view.get(p.id);
+      if (!v || v.type !== p.type) { v = { x: Math.cos(a) * r * 1.6, y: 7, z: Math.sin(a) * r * 1.6, born: T, type: p.type, model: (MODELS[p.type] || MODELS.generic)(), flash: 0 }; view.set(p.id, v); }
+      v.tx = Math.cos(a) * r; v.tz = Math.sin(a) * r; v.ty = TYPE_Y[p.type] || 0; v.r = r;
+    });
+  }
+  cam.fit = Math.max(18, maxR * 1.8 + 10);
+  if (cam.auto) cam.tDist = selected && view.get(selected) ? 19 : cam.fit;
+}
+
+function strokeSegs(segs, ox, oy, oz, sc, rot, color, alpha, upto, dash) {
+  const c = Math.cos(rot), s = Math.sin(rot), n = Math.min(segs.length, upto);
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const g = segs[i];
+    const a = proj(ox + (g[0] * c - g[2] * s) * sc, oy + g[1] * sc, oz + (g[0] * s + g[2] * c) * sc);
+    const b = proj(ox + (g[3] * c - g[5] * s) * sc, oy + g[4] * sc, oz + (g[3] * s + g[5] * c) * sc);
+    if (a && b) { ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); }
+  }
+  ctx.setLineDash(dash ? [3, 4] : []);
+  ctx.strokeStyle = color; ctx.globalAlpha = alpha * 0.16; ctx.lineWidth = 5; ctx.stroke();
+  ctx.globalAlpha = alpha; ctx.lineWidth = 1.15; ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+let selected = null, hoverId = null, runPulse = 0, last = performance.now();
+const pointer = { on: false, down: false, x: 0, y: 0 };
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now; T += dt;
+  cam.dist += (cam.tDist - cam.dist) * Math.min(1, dt * 4);
+  cam.explode += (cam.tExplode - cam.explode) * Math.min(1, dt * 5);
+  if (!dragging && !handActive && !matchMedia('(prefers-reduced-motion: reduce)').matches) cam.yaw += dt * 0.05;
+  const E = cam.explode;
+  { const sv = selected && view.get(selected), k = Math.min(1, dt * 3.5); // glide the camera onto the selected part
+    cam.fx += ((sv ? sv.x : 0) - cam.fx) * k; cam.fy += ((sv ? sv.y : 0) - cam.fy) * k; cam.fz += ((sv ? sv.z : 0) - cam.fz) * k; cam.cx += ((sv && W > 980 ? 0.63 : 0.5) - cam.cx) * k; }
+  const near = new Set(); if (selected) { near.add(selected); for (const l of S.graph.links) { if (l.from === selected) near.add(l.to); if (l.to === selected) near.add(l.from); } }
+  ctx.clearRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'lighter';
+
+  // bench floor: range rings, bearing ticks and a scale bar, like a drawing sheet
+  const fy = -3.2 - E * 2.5;
+  for (let r = 4; r <= 24; r += 4) strokeSegs(ring(r, fy, 56), 0, 0, 0, 1, 0, '#12384c', r % 8 ? 0.55 : 0.95, 1e9);
+  const ticks = []; for (let i = 0; i < 72; i++) { const a = i / 72 * 6.2832, r0 = 24, r1 = i % 6 ? 24.5 : 25.4; ticks.push([Math.cos(a) * r0, fy, Math.sin(a) * r0, Math.cos(a) * r1, fy, Math.sin(a) * r1]); }
+  for (let i = 0; i < 4; i++) { const a = i * 1.5708; ticks.push([0, fy, 0, Math.cos(a) * 24, fy, Math.sin(a) * 24]); }
+  strokeSegs(ticks, 0, 0, 0, 1, 0, '#12384c', 0.9, 1e9);
+  for (let i = 0; i < 5; i++) { const a = T * 0.35 - i * 0.07; strokeSegs([[0, fy, 0, Math.cos(a) * 16, fy, Math.sin(a) * 16]], 0, 0, 0, 1, 0, '#2fb6d6', 0.55 - i * 0.11, 1e9); } // radar sweep
+  ctx.fillStyle = '#7fdcf5';
+  for (const d of DUST) { d.y += dt * d.v; if (d.y > 10) d.y = fy; const q = proj(d.x, d.y, d.z); if (q) { ctx.globalAlpha = Math.max(0, Math.min(0.5, 6 / q[2])) * (0.5 + 0.5 * Math.sin(T * d.v * 3 + d.x)); ctx.fillRect(q[0], q[1], 1.3, 1.3); } }
+
+  const parts = S.graph.parts, pos = {};
+  for (const p of parts) {
+    const v = view.get(p.id); if (!v) continue;
+    const k = Math.min(1, dt * 3.2);
+    const ex = 1 + E * 0.85;
+    v.x += (v.tx * ex - v.x) * k; v.y += (v.ty * (1 + E * 1.6) - v.y) * k; v.z += (v.tz * ex - v.z) * k;
+    pos[p.id] = v;
+  }
+  // wiring with travelling pulses
+  for (const l of S.graph.links) {
+    const a = pos[l.from], b = pos[l.to]; if (!a || !b) continue;
+    const pa = S.graph.parts.find((p) => p.id === l.from), pb = S.graph.parts.find((p) => p.id === l.to);
+    const live = pa.status === 'building' || pb.status === 'building' || runPulse > T;
+    const mine = selected && (l.from === selected || l.to === selected), faded = selected && !mine;
+    const dead = pa.status === 'retired' || pb.status === 'retired' || pa.status === 'planned' || pb.status === 'planned';
+    const lift = 1.1 + Math.hypot(a.x - b.x, a.z - b.z) * 0.12, pts = [];
+    for (let i = 0; i <= 18; i++) { const t = i / 18, u = 1 - t; pts.push(proj(a.x * u + b.x * t, a.y * u + b.y * t + Math.sin(t * Math.PI) * lift, a.z * u + b.z * t)); }
+    ctx.beginPath(); pts.forEach((p, i) => p && (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+    ctx.setLineDash(dead ? [2, 5] : []); ctx.strokeStyle = mine ? '#ffffff' : live ? '#ffb547' : '#2b88a8'; ctx.globalAlpha = faded ? 0.12 : dead ? 0.35 : mine ? 1 : 0.7; ctx.lineWidth = mine ? 1.8 : 1; ctx.stroke(); ctx.setLineDash([]);
+    if (!dead && !faded) for (let j = 0; j < (live || mine ? 3 : 1); j++) {
+      const t = (T * (live || mine ? 0.9 : 0.28) + j / 3 + (l.from.length * 0.13)) % 1, p = pts[Math.floor(t * 18)];
+      if (p) { ctx.globalAlpha = 0.95; ctx.fillStyle = live ? '#ffd28a' : '#9af0ff'; ctx.beginPath(); ctx.arc(p[0], p[1], live ? 2.6 : 1.8, 0, 6.2832); ctx.fill(); }
+    }
+    const m = pts[9]; if (m && l.label && !faded && (mine || m[3] > 26)) { ctx.globalAlpha = mine ? 1 : 0.75; ctx.fillStyle = mine ? '#ffffff' : '#5d7b92'; ctx.font = '9px ui-monospace, Menlo, monospace'; ctx.textAlign = 'center'; ctx.fillText(l.label.toUpperCase(), m[0], m[1] - 6); }
+  }
+  // parts, far to near
+  const order = parts.filter((p) => pos[p.id]).map((p) => ({ p, v: pos[p.id], c: proj(pos[p.id].x, pos[p.id].y, pos[p.id].z) })).filter((o) => o.c).sort((a, b) => b.c[2] - a.c[2]);
+  for (const { p, v, c } of order) {
+    const age = T - v.born, color = COLORS[p.status] || COLORS.planned, nL = v.model.length;
+    let alpha = p.status === 'planned' ? 0.6 : p.status === 'retired' ? 0.45 : 1;
+    if (p.status === 'building') alpha = 0.75 + Math.sin(T * 7) * 0.25;
+    if (selected && !near.has(p.id)) alpha *= 0.28;
+    alpha *= Math.max(0.4, Math.min(1, 1.4 - c[2] / (cam.dist * 1.75))); // parts further away fade back
+    if (p.status !== 'retired') { // each part stands on a pad with a status arc and is tethered to it by a light column
+      const padA = alpha * (p.status === 'planned' ? 0.35 : 0.7);
+      strokeSegs(loop(poly(6, 1.75, fy, T * 0.1)), v.x, 0, v.z, 1, 0, color, padA, 1e9);
+      strokeSegs(ring(2.15, fy, 30), v.x, 0, v.z, 1, T * (p.status === 'building' ? 1.6 : 0.35), color, padA, p.status === 'building' ? 22 : p.status === 'ready' ? 30 : 9);
+      const a0 = proj(v.x, fy, v.z), a1 = proj(v.x, v.y - 1.2, v.z);
+      if (a0 && a1) { const g = ctx.createLinearGradient(a0[0], a0[1], a1[0], a1[1]); g.addColorStop(0, color); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.globalAlpha = padA * 0.8; ctx.strokeStyle = g; ctx.lineWidth = p.type === 'llm' ? 5 : 2.5; ctx.beginPath(); ctx.moveTo(a0[0], a0[1]); ctx.lineTo(a1[0], a1[1]); ctx.stroke(); }
+      if (p.status === 'ready' || p.status === 'building') { const r = c[3] * (p.type === 'llm' ? 0.55 : 0.32) * (1 + Math.sin(T * 3 + v.x) * 0.12), g = ctx.createRadialGradient(c[0], c[1], 0, c[0], c[1], r); g.addColorStop(0, color); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.globalAlpha = alpha * 0.55; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c[0], c[1], r, 0, 6.2832); ctx.fill(); }
+    }
+    const hot = hoverId === p.id;
+    const jit = p.status === 'error' ? (Math.random() - 0.5) * 0.09 : 0;
+    const sc = (selected === p.id ? 1.5 : 1.32) * Math.min(1, 0.3 + age * 1.4);
+    v.model.forEach((L, i) => {
+      const oy = (i - (nL - 1) / 2) * E * 1.5;
+      const upto = age < 1.6 ? Math.ceil(L.s.length * age / 1.6) : 1e9; // "printed" into existence
+      strokeSegs(L.s, v.x + jit, v.y + oy, v.z, sc, L.spin ? T * L.spin * (p.status === 'building' ? 2 : p.status === 'ready' ? 1 : 0.15) : 0, v.flash > T || hot ? '#ffffff' : color, alpha, upto, p.status === 'planned');
+    });
+    if (p.status === 'building') strokeSegs(ring(1.9, Math.sin(T * 2.4) * 1.4, 26), v.x, v.y, v.z, 1, 0, '#ffb547', 0.9, 1e9); // scan ring
+    // callout label with leader line
+    const top = proj(v.x, v.y + 1.9 + E * nL * 0.7, v.z); if (!top) continue;
+    const lx = top[0] + 26, ly = top[1] - 20;
+    const la = selected && !near.has(p.id) ? 0.3 : 1;
+    ctx.globalAlpha = 0.8 * la; ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(top[0], top[1]); ctx.lineTo(lx - 4, ly + 4); ctx.lineTo(lx + 60, ly + 4); ctx.stroke();
+    ctx.textAlign = 'left'; ctx.globalAlpha = la; ctx.fillStyle = selected === p.id ? '#ffffff' : '#d4ecf7'; ctx.font = '600 11px ui-monospace, Menlo, monospace'; ctx.fillText((p.name || p.id).toUpperCase(), lx, ly);
+    ctx.fillStyle = color; ctx.font = '9px ui-monospace, Menlo, monospace'; ctx.fillText(`${p.type} · ${p.status}${(p.files || []).length ? ' · ' + p.files.length + ' file' + (p.files.length > 1 ? 's' : '') : ''}`.toUpperCase(), lx, ly + 16);
+    v.sx = c[0]; v.sy = c[1]; v.sr = c[3] * 1.5;
+  }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  if (pointer.on) { // fingertip pointer
+    const c = pointer.down ? '#ffb547' : '#5fe3ff';
+    ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(pointer.x, pointer.y, pointer.down ? 9 : 14, 0, 6.2832); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pointer.x - 22, pointer.y); ctx.lineTo(pointer.x - 8, pointer.y); ctx.moveTo(pointer.x + 8, pointer.y); ctx.lineTo(pointer.x + 22, pointer.y); ctx.moveTo(pointer.x, pointer.y - 22); ctx.lineTo(pointer.x, pointer.y - 8); ctx.moveTo(pointer.x, pointer.y + 8); ctx.lineTo(pointer.x, pointer.y + 22); ctx.stroke();
+    ctx.fillStyle = c; ctx.beginPath(); ctx.arc(pointer.x, pointer.y, 2, 0, 6.2832); ctx.fill();
+  }
+  if (!parts.length) { ctx.fillStyle = '#5d7b92'; ctx.textAlign = 'center'; ctx.font = '12px ui-monospace, Menlo, monospace'; ctx.fillText(S.atHome ? 'SAY “KACY” AND ASK FOR ANYTHING · PARTS APPEAR HERE WHEN YOU BUILD' : 'BENCH IS CLEAR · TELL KACY WHAT TO BUILD', W / 2, H / 2); }
+  requestAnimationFrame(frame);
+}
+
+// mouse control
+let dragging = false, moved = 0, px = 0, py = 0;
+cv.addEventListener('pointerdown', (e) => { dragging = true; moved = 0; px = e.clientX; py = e.clientY; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove', (e) => { if (!dragging) return; const dx = e.clientX - px, dy = e.clientY - py; moved += Math.abs(dx) + Math.abs(dy); cam.yaw += dx * 0.006; cam.pitch = Math.max(-0.1, Math.min(1.35, cam.pitch + dy * 0.005)); px = e.clientX; py = e.clientY; });
+cv.addEventListener('pointerup', (e) => { dragging = false; if (moved < 5) pick(e.clientX, e.clientY); });
+cv.addEventListener('wheel', (e) => { e.preventDefault(); cam.auto = false; cam.tDist = Math.max(7, Math.min(70, cam.tDist * (1 + e.deltaY * 0.0012))); }, { passive: false });
+cv.addEventListener('dblclick', () => setExplode(cam.tExplode < 0.5));
+function partAt(x, y, slack = 1) {
+  let best = null, bd = 1e9;
+  for (const [id, v] of view) { if (v.sx == null) continue; const d = Math.hypot(v.sx - x, v.sy - y); if (d < Math.max(34, v.sr) * slack && d < bd) { bd = d; best = id; } }
+  return best;
+}
+function select(id) { selected = id; cam.auto = true; cam.tDist = id ? 19 : cam.fit; inspect(); }
+function pick(x, y) { select(partAt(x, y)); }
+function setExplode(on) { cam.tExplode = on ? 1 : 0; $('boom').classList.toggle('on', !!on); }
+
+/* ───────────────────────── panels ───────────────────────── */
+let inspected = null;
+function inspect() {
+  const p = S.graph.parts.find((x) => x.id === selected);
+  $('inspector').classList.toggle('show', !!p); if (!p) { inspected = null; return; }
+  const nm = (id) => { const q = S.graph.parts.find((x) => x.id === id); return q ? q.name || q.id : id; };
+  const wire = (l, other, arrow) => `<div class="wire" data-go="${esc(other)}"><b>${arrow} ${esc(nm(other))}</b>${l.label ? ' <i>' + esc(l.label) + '</i>' : ''}` +
+    (l.how ? `<code>${esc(l.how)}</code>` : '') + (l.where ? `<small data-w="${esc(l.where)}">${esc(l.where)}</small>` : '') + '</div>';
+  const out = S.graph.links.filter((l) => l.from === p.id).map((l) => wire(l, l.to, '→')), inn = S.graph.links.filter((l) => l.to === p.id).map((l) => wire(l, l.from, '←'));
+  $('insBody').innerHTML = `<h3>${esc(p.name || p.id)}</h3><div class="meta">${esc(p.type)} · ${esc(p.status)}</div>` +
+    (p.description ? `<p>${esc(p.description)}</p>` : '') + (p.note ? `<p>${esc(p.note)}</p>` : '') +
+    (out.length ? `<h4>TALKS TO</h4>${out.join('')}` : '') + (inn.length ? `<h4>HEARS FROM</h4>${inn.join('')}` : '') +
+    `<h4>CODE</h4>` + ((p.files || []).length ? '<div class="files">' + p.files.map((f) => `<a data-f="${esc(f)}">${esc(f)}</a>`).join('') + '</div><pre id="insCode"></pre>' : '<p style="color:var(--dim)">No files mapped yet.</p>') +
+    `<div class="row"><button id="insExplain">Explain this part</button><button id="insTrace">Trace the flow</button></div>`;
+  const show = async (f, line) => {
+    const pre = $('insCode'); if (!pre) return;
+    if (S.demo) { pre.textContent = DEMO_CODE[f] || '# opens in the desktop app'; return; }
+    const r = await fetch('/api/file?path=' + encodeURIComponent(f)).then((x) => x.json()).catch(() => ({}));
+    const lines = (r.text || (r.dir ? r.dir.join('\n') : r.error || '')).split('\n');
+    pre.innerHTML = lines.map((t, i) => `<span class="${line && i + 1 === line ? 'hit' : ''}"><em>${i + 1}</em>${esc(t)}\n</span>`).join('');
+    const hit = pre.querySelector('.hit'); if (hit) pre.scrollTop = hit.offsetTop - 60;
+  };
+  $('insBody').querySelectorAll('a[data-f]').forEach((a) => (a.onclick = () => show(a.dataset.f)));
+  $('insBody').querySelectorAll('small[data-w]').forEach((w) => (w.onclick = (e) => { e.stopPropagation(); const m = w.dataset.w.match(/^(.*?):(\d+)/); show(m ? m[1] : w.dataset.w, m ? Number(m[2]) : 0); }));
+  $('insBody').querySelectorAll('.wire').forEach((w) => (w.onclick = () => select(w.dataset.go)));
+  $('insExplain').onclick = () => command(`Explain the "${p.name || p.id}" part so I can learn from it: what it does, then each part it talks to and the exact lines of code that reach it. Show it with desk_note.`, true);
+  $('insTrace').onclick = () => { runPulse = T + 8; };
+  if (inspected !== p.id && (p.files || []).length) show(p.files[0]);
+  inspected = p.id;
+}
+const DEMO_CODE = { 'src/retriever.py': 'class Retriever:\n    def __init__(self, encoder, store):\n        self.encoder, self.store = encoder, store\n\n    def __call__(self, question: str):\n        q = self.encoder.embed([question])[0]\n        return self.store.search(q)' };
+$('insX').onclick = () => select(null);
+
+const LANE = { system: { box: 'actsS', chip: 'mS', use: 'uS', n: 0, busy: false, start: 0, tick: 0, cost: 0, tok: 0, model: '' }, project: { box: 'actsP', chip: 'mP', use: 'uP', n: 0, busy: false, start: 0, tick: 0, cost: 0, tok: 0, model: '' } };
+const laneOf = (l) => LANE[l === 'project' ? 'project' : 'system'];
+function laneChip(L) { $(L.chip).textContent = (L.model || 'default') + (L.busy && L.start ? ' · ' + Math.round((Date.now() - L.start) / 1000) + 's' : ''); $(L.use).textContent = L.tok ? ` ${L.tok.toLocaleString()} tok · $${L.cost.toFixed(2)}` : ''; }
+function act(text, kind = 'tool', lane = 'system') {
+  const L = laneOf(lane), box = $(L.box); if (!L.n++) box.innerHTML = '';
+  box.querySelectorAll('.live').forEach((e) => e.classList.remove('live'));
+  const el = document.createElement('div'); el.className = 'act ' + kind + (kind === 'tool' || kind === 'think' ? ' live' : '');
+  el.innerHTML = `<time>${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</time>${esc(text)}`;
+  box.prepend(el); while (box.children.length > 60) box.lastChild.remove();
+  if (kind === 'tool' || kind === 'think') { if (!L.busy) { L.busy = true; L.start = Date.now(); L.tick = setInterval(() => laneChip(L), 500); box.parentElement.classList.add('busy'); } busy = true; setState('thinking', (lane === 'project' ? 'project: ' : 'system: ') + text); }
+  if (kind === 'done') endWork(lane);
+}
+function endWork(lane) {
+  for (const key of lane ? [lane === 'project' ? 'project' : 'system'] : ['system', 'project']) { const L = LANE[key]; clearInterval(L.tick); L.busy = false; L.start = 0; laneChip(L); $(L.box).parentElement.classList.remove('busy'); $(L.box).querySelectorAll('.live').forEach((e) => e.classList.remove('live')); }
+  busy = LANE.system.busy || LANE.project.busy;
+}
+// short confirmation tone, so you know a command landed before anything else happens
+let audioCtx = null;
+function blip(freq = 880, ms = 90) { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.frequency.value = freq; g.gain.setValueAtTime(0.07, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + ms / 1000); o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + ms / 1000); } catch {} }
+let codeCount = 0;
+function addCode({ file, action, code }) {
+  const box = $('code'); if (!codeCount) box.innerHTML = '';
+  codeCount++; $('codeN').textContent = codeCount;
+  const el = document.createElement('div'); el.className = 'entry' + (action === 'run' ? ' run' : action === 'note' || action === 'do this' ? ' note' : '');
+  const short = String(file || '').split('/').slice(-2).join('/');
+  el.innerHTML = `<div class="f"><span>${esc(short)}</span><span>${esc(action)}</span></div><pre></pre>`;
+  box.prepend(el); while (box.children.length > 14) box.lastChild.remove();
+  const pre = el.querySelector('pre'), text = String(code || ''); let i = 0; // typed out, so you can watch it being written
+  (function typeOut() { i = Math.min(text.length, i + Math.max(6, text.length / 60)); pre.textContent = text.slice(0, i); if (i < text.length) requestAnimationFrame(typeOut); })();
+}
+function renderSide() {
+  $('dirty').textContent = S.dirty ? S.dirty + ' uncommitted' : '';
+  $('commits').innerHTML = S.commits.length ? S.commits.map((c) => `<div class="commit"><code>${esc(c.hash)}</code><span>${esc(c.subject)}</span><small>${esc(c.when)} · ${esc(c.author)}</small></div>`).join('') : '<div class="empty">No commits yet.</div>';
+  const jobs = [...S.schedule].reverse();
+  $('schedule').innerHTML = jobs.length ? jobs.map((j) => `<div class="job ${j.status !== 'waiting' ? 'off' : ''}"><time>${esc(new Date(j.at).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' }))} · ${esc(j.status)}</time>${esc(j.instruction)}${j.status === 'waiting' ? `<div class="row"><button data-cancel="${esc(j.id)}">cancel</button></div>` : ''}</div>`).join('') : '<div class="empty">No scheduled tasks.</div>';
+  const hs = [...S.handoffs].reverse();
+  $('handoffs').innerHTML = hs.length ? hs.map((h) => `<div class="job ${h.done ? 'off' : ''}">${esc(h.what)}${h.command ? `<code>${esc(h.command)}</code>` : ''}${h.done ? '' : `<div class="row">${h.command ? `<button data-copy="${esc(h.command)}">copy</button>` : ''}<button data-done="${esc(h.id)}">I did it</button></div>`}</div>`).join('') : '<div class="empty">Kacy never deletes. Removals wait here for you.</div>';
+}
+document.body.addEventListener('click', (e) => {
+  if (!e.target.closest('#schedule, #handoffs')) return;
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.cancel) api('/api/schedule/cancel', { id: b.dataset.cancel });
+  if (b.dataset.done) { if (S.demo) { S.handoffs.find((h) => h.id === b.dataset.done).done = true; renderSide(); } else api('/api/handoff/done', { id: b.dataset.done }); }
+  if (b.dataset.copy) navigator.clipboard?.writeText(b.dataset.copy).then(() => (b.textContent = 'copied'), () => {});
+});
+function renderTop() {
+  const sel = $('project');
+  sel.innerHTML = `<option value="__home" ${S.atHome ? 'selected' : ''}>no project (assistant)</option>` + S.hangar.map((h) => `<option value="${esc(h.path)}" ${h.path === S.project ? 'selected' : ''}>${esc(h.name)}${h.hasDesk ? ' ◆' : ''}</option>`).join('') + `<option value="__new">+ new project…</option>`;
+  $('ctl').textContent = S.control === 'hands' ? 'Hands: on' : 'Eyes only'; $('ctl').classList.toggle('on', S.control === 'hands');
+  const p = S.graph.parts, ready = p.filter((x) => x.status === 'ready').length;
+  $('telemetry').innerHTML = `${S.atHome ? 'mode <b>assistant</b>' : 'project <b>' + esc(S.graph.name || '—') + '</b>'}<br>parts <b>${p.length}</b> · wires <b>${S.graph.links.length}</b><br>ready <b>${ready}/${p.length}</b>${p.some((x) => x.status === 'error') ? ' · <b style="color:var(--rd)">fault</b>' : ''}` + (S.brain.online ? '' : '<br><b style="color:var(--rd)">brain offline · install claude code</b>');
+  $('meter').textContent = S.cost || S.tokens ? `SESSION $${S.cost.toFixed(2)} · ${S.tokens.toLocaleString()} TOK` : '';
+}
+$('project').onchange = async (e) => {
+  const v = e.target.value; if (!v || S.demo) return;
+  if (v === '__home') return api('/api/project', { home: true });
+  if (v === '__new') { const name = ($('cmd').value || '').trim(); if (!name) { say('Type the new project name in the box below, then choose "new project" again.', true); renderTop(); return; } $('cmd').value = ''; return api('/api/project', { create: name }); }
+  api('/api/project', { path: v });
+};
+function setState(s, label) { document.body.dataset.state = s; $('state').title = label || ''; $('state').textContent = label || { idle: 'standing by', listening: 'listening', thinking: 'working', speaking: 'speaking' }[s] || s; }
+
+/* ───────────────────────── voice: wake word "Kacy" + speech out ───────────────────────── */
+// Speech-to-text spells the name many ways (Casey, KC, Kasi, Cassie...). Match by sound, not spelling.
+const WAKE = /\b(?:(?:hey|hi|ok|okay|yo)\s+)?(?:(?:k|c|g|st|tr|t|l|j)a(?:s|c|ss)(?:i|y|ey|ee|ie)|(?:k|c)(?:e|ay|ei|ai)(?:s|c|ss)(?:i|y|ey|ee|ie)|jay\s?(?:see|c|cee)|[kj]\.?\s?c\.?|kay\s?(?:see|sea|c)|kc)\b[\s,.!?]*/i;
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let retired = false, es = null;
+let rec = null, micOn = false, awakeUntil = 0, speaking = false, micFails = 0;
+let lastDiag = '';
+const diag = (t) => { if (S.demo || t === lastDiag) return; lastDiag = t; fetch('/api/log', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: t }) }).catch(() => {}); };
+const micNote = (t, bad) => { $('heard').textContent = t; $('heard').style.color = bad ? 'var(--rd)' : ''; if (bad) diag(t); };
+let lastSpoken = '', lastSpokenAt = 0;
+const wordsOf = (t) => String(t).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
+const spokenLog = [];
+function noteSpoken(text) { spokenLog.push({ t: Date.now(), words: wordsOf(text) }); while (spokenLog.length > 12) spokenLog.shift(); }
+function saidWords() { const set = new Set(); for (const e of spokenLog) if (Date.now() - e.t < 30000) e.words.forEach((w) => set.add(w)); return set; }
+function isEcho(text) { // the microphone picking up Kacy's own voice
+  if (Date.now() - lastSpokenAt > 30000) return false;
+  const said = saidWords(), heard = wordsOf(text);
+  return heard.length > 0 && heard.filter((w) => said.has(w)).length / heard.length >= 0.6;
+}
+// While she is talking the microphone stays open for one thing only: you telling her to stop.
+const HUSH = /\b(stop|quiet|silence|enough|shut up|be quiet|stop talking|pause|cancel|hush|shh+|ok(ay)? (stop|enough)|that'?s enough|never ?mind)\b/i;
+let hushedAt = 0;
+function bargeIn(text) {
+  const words = wordsOf(text); if (!words.length || Date.now() - hushedAt < 1500) return false;
+  const said = saidWords(), fresh = words.filter((w) => !said.has(w)).join(' '); // drop the words that are just her own voice coming back
+  const tail = words.slice(-3).join(' ');
+  if (!(HUSH.test(fresh) || words.length <= 3 && HUSH.test(text) || HUSH.test(tail) && !said.has('stop') && !said.has('enough'))) return false;
+  hushedAt = Date.now(); diag('barge-in: "' + text.slice(0, 60) + '"'); blip(520, 80);
+  try { speechSynthesis.cancel(); } catch {}
+  if (/\b(everything|all|the (task|build|work|job)|working)\b/i.test(text)) stopAll(); else if (!S.demo) api('/api/hush'); // "stop" quiets her; "stop everything" also stops the work
+  micNote('▶ stopped talking');
+  return true;
+}
+function say(text, quiet) {
+  $('said').textContent = text;
+  if (quiet) return;
+  lastSpoken = text; lastSpokenAt = Date.now(); noteSpoken(text);
+  if (S.engineVoice && !S.demo) return void api('/api/speak', { text }); // spoken by the engine (macOS "say")
+  if (!('speechSynthesis' in window)) return;
+  const u = new SpeechSynthesisUtterance(String(text).replace(/[`*_#>]/g, '').slice(0, 320)); u.rate = 1.05;
+  u.onstart = () => onSpeaking(true); u.onend = u.onerror = () => onSpeaking(false, /\?\s*$/.test(text));
+  try { speechSynthesis.speak(u); } catch {}
+}
+function onSpeaking(on, question) {
+  if (on) { // close the microphone while she talks, and throw away whatever it had half-heard
+    speaking = true; setState('speaking'); lastSpokenAt = Date.now();
+    try { rec && rec.abort(); } catch {} // onend restarts it at once, so a spoken "stop" can still get through
+    return;
+  }
+  lastSpokenAt = Date.now();
+  setTimeout(() => {
+    speaking = false;
+    if (micOn) { try { rec.start(); } catch {} }
+    // keep the conversation open for a moment after she speaks: longer when she asked something
+    if (micOn) { const win = question ? 25000 : 20000; awakeUntil = Date.now() + win; setState(busy && !question ? 'thinking' : 'listening', question ? 'your turn' : busy ? undefined : 'listening'); micNote(question ? '▶ your turn, go ahead' : '▶ still listening, no need to say Kacy'); setTimeout(() => { if (Date.now() >= awakeUntil && document.body.dataset.state === 'listening') { setState(busy ? 'thinking' : 'idle'); micNote('voice on · say “Kacy …”'); } }, win + 200); }
+    else setState(busy ? 'thinking' : 'idle');
+  }, 700); // let the room go quiet first
+}
+const MIC_ERRORS = {
+  'not-allowed': 'Microphone is blocked. Click the lock/mic icon in the address bar and allow the microphone, then press Voice.',
+  'service-not-allowed': 'Speech recognition is switched off for this browser. In Safari turn on Dictation in System Settings > Keyboard, or use Google Chrome.',
+  'network': 'This browser cannot reach a speech service. Open the desk in Google Chrome (Brave, Arc and Firefox do not support it).',
+  'audio-capture': 'No microphone found. Check the input device in System Settings > Sound.',
+  'language-not-supported': 'This speech language is not supported; switching to English.',
+};
+function startMic(auto) {
+  if (!SR) { micNote('voice: this browser has no speech recognition, use Google Chrome · ' + navigator.userAgent, true); return; }
+  if (rec) { try { rec.onend = null; rec.stop(); } catch {} }
+  rec = new SR(); rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 4; rec.lang = /^en/i.test(navigator.language || '') ? navigator.language : 'en-IN';
+  rec.onstart = () => { diag('voice started, lang ' + rec.lang + ', ' + navigator.userAgent); micOn = true; micFails = 0; $('mic').classList.add('on'); $('mic').textContent = 'Voice: on'; micNote('voice on · say “Kacy …”'); };
+  rec.onresult = (e) => {
+    micFails = 0; diag('voice is receiving speech');
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (speaking) { const heardNow = Array.from(e.results[i]).map((a) => a.transcript).find((t) => bargeIn(t)); continue; }
+      // the recogniser offers several spellings of what it heard; take the first one that contains the name
+      let text = e.results[i][0].transcript.trim(), m = text.match(WAKE);
+      for (let a = 1; !m && a < e.results[i].length; a++) { const alt = e.results[i][a].transcript.trim(), am = alt.match(WAKE); if (am) { text = alt; m = am; } }
+      if (!text) continue;
+      const awake = Date.now() < awakeUntil, final = e.results[i].isFinal;
+      if (isEcho(text)) { if (final) diag('ignored echo: ' + text.slice(0, 80)); continue; }
+      // always show what was heard, so you can see the microphone working and how the name is being spelled
+      micNote((awake || m ? '▶ ' : 'say “Kacy” first · heard: ') + text); $('heard').style.opacity = awake || m ? 1 : 0.55;
+      if (awake || m) setState('listening');
+      if (!final) continue;
+      if (m) { const rest = text.slice(m.index + m[0].length).trim(); if (rest.length > 2) { command(rest); } else { awakeUntil = Date.now() + 10000; blip(660, 120); setState('listening'); micNote('▶ yes? go ahead'); } }
+      else if (awake) { command(text); }
+      else { diag('heard without wake word: ' + text.slice(0, 80)); setState(busy ? 'thinking' : 'idle'); }
+    }
+  };
+  rec.onerror = (e) => {
+    if (e.error === 'no-speech' || e.error === 'aborted') return;
+    micFails++; diag('voice error: ' + e.error + ' ' + (e.message || ''));
+    if (e.error === 'language-not-supported') rec.lang = 'en-US';
+    if (e.error === 'network') { micNote('voice: speech service hiccup, retrying…'); return; } // onend restarts it
+    const fatal = ['not-allowed', 'service-not-allowed', 'audio-capture'].includes(e.error);
+    if (fatal) { micOn = false; $('mic').classList.remove('on'); $('mic').textContent = 'Voice'; }
+    if (!(auto && e.error === 'not-allowed')) { micNote('voice: ' + (MIC_ERRORS[e.error] || e.error), true); $('said').textContent = MIC_ERRORS[e.error] || ('Voice error: ' + e.error); }
+    else micNote('press Voice to turn the microphone on');
+  };
+  rec.onend = () => { if (micOn && !retired) setTimeout(() => { if (micOn) { try { rec.start(); } catch {} } }, micFails > 2 ? 2500 : speaking ? 60 : 250); };
+  try { rec.start(); } catch (err) { micNote('voice: ' + err.message, true); }
+}
+function stopMic() { micOn = false; try { rec && rec.stop(); } catch {} $('mic').classList.remove('on'); $('mic').textContent = 'Voice'; micNote('voice off'); }
+$('mic').onclick = () => { if (S.demo) return say('Voice needs the microphone, which works in the desktop app, not in this preview.', true); micOn ? stopMic() : startMic(false); };
+
+/* ───────────────────────── controls: models, air mouse feel, clap ───────────────────────── */
+const PREF = { speed: 1.6, smooth: 0.45, pinch: 0.34, hold: 450, clap: true, clapLevel: 0.35 };
+try { Object.assign(PREF, JSON.parse(localStorage.getItem('kacy-prefs') || '{}')); } catch {}
+const savePref = () => { try { localStorage.setItem('kacy-prefs', JSON.stringify(PREF)); } catch {} };
+const MODEL_CHOICES = [['', 'Your Claude Code default'], ['haiku', 'Haiku · smallest, fastest, cheapest'], ['sonnet', 'Sonnet · balanced'], ['opus', 'Opus · strongest'], ['fable', 'Fable · strongest']];
+function renderPanel() {
+  const m = S.models || { system: 'haiku', project: '', mode: 'auto' };
+  for (const [id, key] of [['selS', 'system'], ['selP', 'project']]) { const el = $(id), list = MODEL_CHOICES.some(([v]) => v === m[key]) ? MODEL_CHOICES : [...MODEL_CHOICES, [m[key], m[key]]]; el.innerHTML = list.map(([v, t]) => `<option value="${esc(v)}" ${v === m[key] ? 'selected' : ''}>${esc(t)}</option>`).join(''); }
+  $('selMode').value = m.mode || 'auto';
+  LANE.system.model = m.system || 'default'; LANE.project.model = m.project || 'default'; laneChip(LANE.system); laneChip(LANE.project);
+}
+function bindRange(id, out, key, fmt) { const el = $(id); el.value = PREF[key]; $(out).textContent = fmt(PREF[key]); el.oninput = () => { PREF[key] = Number(el.value); $(out).textContent = fmt(PREF[key]); savePref(); }; }
+bindRange('rSpeed', 'oSpeed', 'speed', (v) => v.toFixed(1) + '×'); bindRange('rSmooth', 'oSmooth', 'smooth', (v) => Math.round(v * 100) + '%');
+bindRange('rPinch', 'oPinch', 'pinch', (v) => v < 0.28 ? 'needs a firm pinch' : v > 0.42 ? 'very easy' : 'normal'); bindRange('rHold', 'oHold', 'hold', (v) => v + ' ms'); bindRange('rClap', 'oClap', 'clapLevel', (v) => v < 0.25 ? 'soft claps count' : v > 0.5 ? 'loud claps only' : 'normal');
+$('cClap').checked = !!PREF.clap; $('cClap').onchange = () => { PREF.clap = $('cClap').checked; savePref(); PREF.clap ? startClap() : stopClap(); };
+for (const id of ['selS', 'selP', 'selMode']) $(id).onchange = () => { if (S.demo) return; api('/api/models', { system: $('selS').value, project: $('selP').value, mode: $('selMode').value }).then((r) => { if (r && !r.error) { S.models = r; renderPanel(); } }); };
+$('cfg').onclick = () => { $('panel').classList.toggle('show'); $('cfg').classList.toggle('on', $('panel').classList.contains('show')); };
+$('panelX').onclick = () => { $('panel').classList.remove('show'); $('cfg').classList.remove('on'); };
+
+/* Double clap = gestures and air mouse on / off. Listens for two sharp, short bursts of sound close together. */
+const CLAP = { stream: null, ctx: null, timer: 0, floor: 0.02, last: 0, first: 0, quietSince: 0, cand: null };
+async function startClap() {
+  if (CLAP.timer || S.demo || !navigator.mediaDevices) return;
+  try {
+    CLAP.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    CLAP.ctx = new (window.AudioContext || window.webkitAudioContext)(); const src = CLAP.ctx.createMediaStreamSource(CLAP.stream), an = CLAP.ctx.createAnalyser(); an.fftSize = 512; src.connect(an);
+    const buf = new Float32Array(an.fftSize);
+    CLAP.timer = setInterval(() => {
+      an.getFloatTimeDomainData(buf); let peak = 0; for (let i = 0; i < buf.length; i++) { const v = Math.abs(buf[i]); if (v > peak) peak = v; }
+      const now = performance.now(), need = Math.max(PREF.clapLevel, CLAP.floor * 5);
+      if (CLAP.cand) { // a real clap dies away within a tenth of a second; speech and music do not
+        if (now - CLAP.cand.t > 110) { const sharp = peak < CLAP.cand.peak * 0.4; CLAP.cand = null; if (sharp) clapHeard(now); }
+      } else if (peak > need && now - CLAP.quietSince > 60 && now - CLAP.last > 140 && !speaking) CLAP.cand = { t: now, peak };
+      if (peak < need * 0.45) { if (!CLAP.quiet) { CLAP.quiet = true; CLAP.quietSince = now; } } else CLAP.quiet = false, CLAP.quietSince = now;
+      CLAP.floor += (Math.min(peak, 0.2) - CLAP.floor) * 0.02;
+    }, 12);
+    diag('clap listener started');
+  } catch (e) { diag('clap listener failed: ' + e.message); }
+}
+function stopClap() { clearInterval(CLAP.timer); CLAP.timer = 0; try { CLAP.stream && CLAP.stream.getTracks().forEach((t) => t.stop()); CLAP.ctx && CLAP.ctx.close(); } catch {} }
+function clapHeard(now) {
+  CLAP.last = now;
+  if (CLAP.first && now - CLAP.first > 170 && now - CLAP.first < 750) { CLAP.first = 0; blip(handsOn ? 440 : 990, 160); diag('double clap: gestures ' + (handsOn ? 'off' : 'on')); if (!handsOn) $('air').classList.add('on'); $('hands').click(); }
+  else CLAP.first = now;
+}
+
+/* ───────────────────────── commands ───────────────────────── */
+let busy = false;
+const api = (path, body) => fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) }).then((r) => r.json()).catch((e) => ({ error: e.message }));
+function command(text, typed) {
+  text = text.trim(); if (!text) return;
+  $('heard').textContent = '“' + text + '”';
+  const t = text.toLowerCase().replace(/[.!?]/g, '');
+  // desk commands are handled instantly, without a round trip to Claude
+  if (/^(stop|cancel|abort|halt)( everything| it| now)?$/.test(t)) return stopAll();
+  if (/^(explode|expand|open (it )?up|pull (it )?apart|exploded view)/.test(t)) { setExplode(true); return say('Exploded view.', true); }
+  if (/^(assemble|shrink|collapse|close (it )?up|put (it )?(back )?together)/.test(t)) { setExplode(false); return say('Assembled.', true); }
+  if (/^zoom in/.test(t)) { cam.auto = false; cam.tDist = Math.max(7, cam.tDist * 0.7); return; }
+  if (/^zoom out/.test(t)) { cam.auto = false; cam.tDist = Math.min(70, cam.tDist * 1.4); return; }
+  if (/^(reset|fit) (the )?view/.test(t)) { cam.auto = true; layout(); return; }
+  if (/^run (mode|it|the flow)/.test(t)) { runPulse = T + 8; return say('Tracing the flow.', true); }
+  if (S.demo) return demoReply(text);
+  blip(); setState('thinking', 'on it…'); if (!typed && micOn) awakeUntil = Date.now() + 20000;
+  api('/api/command', { text, voice: !typed }).then((r) => { if (r.error) { say(r.error, true); setState('idle'); } if (r.ignored) { setState('idle'); micNote('ignored: that was my own voice'); } });
+}
+function stopAll() { endWork(); try { speechSynthesis.cancel(); } catch {} awakeUntil = 0; if (S.demo) return say('Stopped.', true); api('/api/stop'); }
+$('cmd').addEventListener('keydown', (e) => { if (e.key === 'Enter') { command(e.target.value, true); e.target.value = ''; } e.stopPropagation(); });
+$('stop').onclick = stopAll;
+$('boom').onclick = () => setExplode(cam.tExplode < 0.5);
+$('air').onclick = () => { $('air').classList.toggle('on'); if (AIR.down) { AIR.down = false; AIR.pinching = false; airSend({ c: 'u', x: AIR.x, y: AIR.y }); } };
+$('ctl').onclick = () => { if (S.demo) { S.control = S.control === 'hands' ? 'eyes' : 'hands'; return renderTop(); } api('/api/control', { level: S.control === 'hands' ? 'eyes' : 'hands' }); };
+addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') stopAll();
+  if (e.key === 'e' || e.key === 'E') setExplode(cam.tExplode < 0.5);
+  if (e.key === ' ') { e.preventDefault(); if (S.demo) return $('cmd').focus(); if (!micOn) startMic(false); awakeUntil = Date.now() + 9000; setState('listening'); micNote('▶ listening, go ahead'); }
+});
+
+/* ───────────────────────── hand gestures (MediaPipe, loaded only when switched on) ─────────────────────────
+   On the desk:  point with the index finger = move the pointer · quick pinch = press (select a part)
+                 pinch and hold, then move = orbit · two hands pinched, pull apart / push together = expand / shrink
+   On the Mac:   open hand swiped sideways = next / previous desktop · open hand held still = show all windows
+                 closed fist held = stop everything                                                             */
+let handActive = false, handsOn = false, handLm = null, camStream = null, handTimer = 0;
+const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+const camLbl = (t) => { if ($('camLbl').textContent !== t) $('camLbl').textContent = t; };
+$('hands').onclick = async () => {
+  if (S.demo) return say('Gestures need the camera, which works in the desktop app, not in this preview.', true);
+  if (handsOn) { if (AIR.down) { AIR.down = false; AIR.pinching = false; airSend({ c: 'u', x: AIR.x, y: AIR.y }); }
+    handsOn = false; handActive = false; pointer.on = false; hoverId = null; clearTimeout(handTimer); $('hands').classList.remove('on'); $('camBox').classList.remove('show'); camStream && camStream.getTracks().forEach((t) => t.stop()); return; }
+  try {
+    camLbl('LOADING…'); $('camBox').classList.add('show');
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240, frameRate: 24 } });
+    const video = $('cam'); video.srcObject = camStream; await video.play();
+    if (!handLm) {
+      const { HandLandmarker, FilesetResolver } = await import(MP + '/vision_bundle.mjs');
+      const fileset = await FilesetResolver.forVisionTasks(MP + '/wasm');
+      handLm = await HandLandmarker.createFromOptions(fileset, { baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task', delegate: 'GPU' }, runningMode: 'VIDEO', numHands: 2 });
+    }
+    handsOn = true; $('hands').classList.add('on'); camLbl('HANDS'); diag('gestures started'); handLoop();
+  } catch (err) { $('camBox').classList.remove('show'); diag('gestures failed: ' + err.message); say('Could not start hand tracking: ' + err.message + '. It needs camera permission and an internet connection the first time.', true); }
+};
+const dist2 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+// Turn 21 landmarks into a named hand pose. Sizes are relative to the palm, so distance from the camera does not matter.
+function readHand(lm, held) {
+  const size = dist2(lm[0], lm[9]) || 0.1, ext = (tip, pip) => dist2(lm[tip], lm[0]) > dist2(lm[pip], lm[0]) * 1.12;
+  const idx = ext(8, 6), mid = ext(12, 10), rng = ext(16, 14), pky = ext(20, 18), thumb = dist2(lm[4], lm[5]) / size > 0.55;
+  const pinch = dist2(lm[4], lm[8]) / size < (held ? PREF.pinch * 1.5 : PREF.pinch), n = idx + mid + rng + pky; // easier to keep a pinch than to start one
+  const pose = pinch ? 'pinch' : n === 4 && thumb ? 'palm' : idx && !mid && !rng && !pky ? 'point' : n === 0 ? 'fist' : 'other';
+  const two = idx && mid && !rng && !pky && !pinch, midPinch = !pinch && dist2(lm[4], lm[12]) / size < 0.3 && idx;
+  return { two, midPinch, kx: 1 - lm[5].x, ky: lm[5].y, pose, cx: 1 - lm[9].x, cy: lm[9].y, tipX: 1 - lm[8].x, tipY: lm[8].y, pinX: 1 - (lm[4].x + lm[8].x) / 2, pinY: (lm[4].y + lm[8].y) / 2 };
+}
+const AIR = { x: 0.5, y: 0.5, down: false, pinching: false, pinchAt: 0, pend: 0, inflight: 0, scrollY: null, rcool: 0 };
+const G = { missionAt: 0, pinchAt: 0, pinchStart: null, prevPinch: null, prevSpread: null, dragged: false, fistSince: 0, palmSince: 0, palmTrail: [], cool: 0, lost: 0 };
+const toScreen = (nx, ny) => [Math.max(0, Math.min(1, (nx - 0.15) / 0.7)) * W, Math.max(0, Math.min(1, (ny - 0.15) / 0.7)) * H]; // the middle 70% of the camera view reaches the whole screen
+function movePointer(nx, ny, down) { const [x, y] = toScreen(nx, ny); pointer.x += (x - pointer.x) * (pointer.on ? 0.45 : 1); pointer.y += (y - pointer.y) * (pointer.on ? 0.45 : 1); pointer.on = true; pointer.down = down; hoverId = partAt(pointer.x, pointer.y, 1.3); }
+// --- air mouse: the hand drives the real Mac cursor everywhere, not just inside the desk ---
+const airOn = () => S.airMouse && S.control === 'hands' && !S.demo && $('air').classList.contains('on');
+function airSend(body) { if (AIR.inflight > 4 && body.c === 'm') return; AIR.inflight++; fetch('/api/pointer', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {}).finally(() => AIR.inflight--); }
+function airMove(nx, ny) { // speed and steadiness come from the Controls panel
+  const g = PREF.speed, tx = Math.max(0, Math.min(1, 0.5 + (nx - 0.5) * g)), ty = Math.max(0, Math.min(1, 0.5 + (ny - 0.5) * g));
+  const d = Math.hypot(tx - AIR.x, ty - AIR.y), dead = 0.002 + PREF.smooth * 0.006;
+  if (d < dead) return;
+  const k = Math.min(0.9, (1 - PREF.smooth) * 0.5 + d * 7); // slow, small movements are smoothed; big ones follow straight away
+  AIR.x += (tx - AIR.x) * k; AIR.y += (ty - AIR.y) * k; airSend({ c: 'm', x: AIR.x, y: AIR.y });
+}
+// A pinch is a CLICK when it is short: the cursor is frozen while you pinch so the click lands exactly where you aimed.
+// Keep the pinch closed past the hold time and it becomes a DRAG (select text, move a window, orbit the model).
+function airPinch(pinched, h, now) {
+  if (pinched !== AIR.pinching) { if (++AIR.pend < 2) return; AIR.pend = 0; AIR.pinching = pinched; // two frames in a row, so a flicker is not a click
+    if (pinched) { AIR.pinchAt = now; AIR.px = h.kx; AIR.py = h.ky; }
+    else if (AIR.down) { AIR.down = false; airSend({ c: 'u', x: AIR.x, y: AIR.y }); camLbl('DROPPED'); }
+    else { airSend({ c: 'c', x: AIR.x, y: AIR.y, n: 1 }); blip(1200, 40); camLbl('CLICK'); AIR.flash = now + 350; }
+    return;
+  }
+  AIR.pend = 0;
+  if (!pinched) return;
+  const moved = Math.hypot(h.kx - AIR.px, h.ky - AIR.py) > 0.035;
+  if (!AIR.down && (now - AIR.pinchAt > PREF.hold || moved && now - AIR.pinchAt > 180)) { AIR.down = true; airSend({ c: 'd', x: AIR.x, y: AIR.y }); }
+  if (AIR.down) { airMove(h.kx, h.ky); camLbl('DRAGGING · OPEN FINGERS TO DROP'); } else camLbl('PINCH · RELEASE TO CLICK');
+}
+function airHand(h, now) {
+  if (h.two) { if (AIR.pinching) airPinch(false, h, now); if (AIR.scrollY != null) { const dy = (h.ky - AIR.scrollY) * 70; if (Math.abs(dy) > 0.6) { airSend({ c: 's', dy: -dy }); AIR.scrollY = h.ky; } } else AIR.scrollY = h.ky; camLbl('SCROLL'); return; }
+  AIR.scrollY = null;
+  if (h.midPinch && now > AIR.rcool) { AIR.rcool = now + 900; airSend({ c: 'r', x: AIR.x, y: AIR.y }); camLbl('RIGHT CLICK'); return; }
+  const pinched = h.pose === 'pinch';
+  if (!pinched && !AIR.pinching) { airMove(h.kx, h.ky); if (!(AIR.flash > now)) camLbl('MOUSE · PINCH = CLICK, HOLD = DRAG'); }
+  airPinch(pinched, h, now);
+}
+function macGesture(name, label) { G.cool = performance.now() + 1300; camLbl(label); api('/api/gesture', { name }).then((r) => r && r.error && r.error !== 'eyes only' && micNote('gesture: ' + r.error, true)); }
+function handLoop() {
+  if (!handsOn) return;
+  handTimer = setTimeout(handLoop, 55); // a timer, not animation frames, so tracking keeps running while the desk is behind other windows
+  const video = $('cam'), now = performance.now(); if (video.readyState < 2) return;
+  let res = null; try { res = handLm.detectForVideo(video, now); } catch { return; }
+  const g = $('camfx').getContext('2d'); g.clearRect(0, 0, 200, 150); g.save(); g.translate(200, 0); g.scale(-1, 1); g.globalAlpha = 0.35; g.drawImage(video, 0, 0, 200, 150); g.globalAlpha = 1;
+  const raw = (res && res.landmarks) || [], hands = raw.map((lm, i) => readHand(lm, i === 0 && (AIR.pinching || !!G.pinchStart)));
+  raw.forEach((lm, i) => { g.fillStyle = { pinch: '#ffb547', palm: '#7dffb0', point: '#ffffff', fist: '#ff5468' }[hands[i].pose] || '#5fe3ff'; for (const p of lm) g.fillRect(p.x * 200 - 1.5, p.y * 150 - 1.5, 3, 3); });
+  g.restore();
+  const pinches = hands.filter((h) => h.pose === 'pinch'), point = hands.find((h) => h.pose === 'point'), palm = hands.find((h) => h.pose === 'palm');
+  handActive = pinches.length > 0 || !!point;
+  if (!hands.length) { if (++G.lost > 6) { pointer.on = false; hoverId = null; } camLbl('HANDS'); G.pinchStart = G.prevPinch = G.prevSpread = null; G.fistSince = G.palmSince = 0; G.palmTrail = []; return; }
+  G.lost = 0;
+
+  if (pinches.length === 2) { // two hands: pull apart to expand and come closer, push together to shrink
+    const d = Math.hypot(pinches[0].pinX - pinches[1].pinX, pinches[0].pinY - pinches[1].pinY);
+    if (G.prevSpread != null) { const dv = d - G.prevSpread; cam.tExplode = Math.max(0, Math.min(1, cam.tExplode + dv * 3.2)); cam.auto = false; cam.tDist = Math.max(7, Math.min(70, cam.tDist * (1 - dv * 1.3))); $('boom').classList.toggle('on', cam.tExplode > 0.5); }
+    G.prevSpread = d; G.prevPinch = G.pinchStart = null; pointer.on = false; camLbl('EXPAND / SHRINK'); if (AIR.down) { AIR.down = false; AIR.pinching = false; airSend({ c: 'u', x: AIR.x, y: AIR.y }); }
+  } else if (airOn() && (pinches.length === 1 || point || hands.some((h) => h.two || h.midPinch))) { // the real cursor follows the hand
+    G.pinchStart = G.prevPinch = G.prevSpread = null; pointer.on = false; hoverId = null;
+    airHand(pinches[0] || point || hands.find((h) => h.two || h.midPinch), now);
+  } else if (pinches.length === 1) { // one hand: a quick pinch is a press, a held pinch that moves is an orbit
+    const p = pinches[0]; G.prevSpread = null;
+    if (!G.pinchStart) { G.pinchStart = { x: p.pinX, y: p.pinY }; G.pinchAt = now; G.dragged = false; }
+    movePointer(p.pinX, p.pinY, true);
+    if (Math.hypot(p.pinX - G.pinchStart.x, p.pinY - G.pinchStart.y) > 0.05) G.dragged = true;
+    if (G.dragged && G.prevPinch) { cam.yaw += (p.pinX - G.prevPinch.x) * 4.5; cam.pitch = Math.max(-0.1, Math.min(1.35, cam.pitch + (p.pinY - G.prevPinch.y) * 3)); camLbl('ORBIT'); } else camLbl('PRESS');
+    G.prevPinch = { x: p.pinX, y: p.pinY };
+  } else {
+    if (G.pinchStart && !G.dragged && now - G.pinchAt < 700) { const hit = partAt(pointer.x, pointer.y, 1.3); select(hit); camLbl(hit ? 'SELECTED' : 'CLEARED'); } // pinch released without moving = press
+    G.pinchStart = G.prevPinch = G.prevSpread = null;
+    if (point) { movePointer(point.tipX, point.tipY, false); camLbl(hoverId ? 'POINT · PINCH TO PRESS' : 'POINT'); }
+    else { pointer.on = false; hoverId = null; if (AIR.down) { AIR.down = false; AIR.pinching = false; airSend({ c: 'u', x: AIR.x, y: AIR.y }); } }
+  }
+
+  // open hand: sideways swipe = switch desktop, held still = show all windows
+  if (palm && !pinches.length && now > G.cool) {
+    G.palmTrail.push({ x: palm.cx, t: now }); while (G.palmTrail.length && now - G.palmTrail[0].t > 450) G.palmTrail.shift();
+    const dx = palm.cx - G.palmTrail[0].x, moving = Math.abs(dx) > 0.06;
+    if (Math.abs(dx) > 0.32) { G.palmTrail = []; G.palmSince = 0; macGesture(dx < 0 ? 'next' : 'prev', dx < 0 ? 'NEXT DESKTOP ▶' : '◀ PREVIOUS DESKTOP'); }
+    else if (moving) G.palmSince = 0;
+    else { if (!G.palmSince) G.palmSince = now; else if (now - G.palmSince > 900) { G.palmSince = 0; macGesture('mission', 'ALL WINDOWS'); G.cool = now + 2500; G.missionAt = now; } else if (!point) camLbl('OPEN HAND · HOLD / SWIPE'); }
+  } else { G.palmTrail = []; G.palmSince = 0; }
+
+  // closed fist held = stop
+  if (hands.every((h) => h.pose === 'fist') && G.missionAt && now - G.missionAt < 60000) { if (now - G.missionAt > 700) { G.missionAt = 0; G.fistSince = now + 2500; macGesture('back', 'BACK TO YOUR WINDOW'); } }
+  else if (hands.every((h) => h.pose === 'fist')) { camLbl('FIST · HOLD TO STOP'); if (!G.fistSince) G.fistSince = now; else if (now - G.fistSince > 1100) { G.fistSince = now + 2500; stopAll(); camLbl('STOPPED'); } } else G.fistSince = 0;
+}
+
+/* ───────────────────────── engine link ───────────────────────── */
+function applyState(d) { if (d.models) S.models = d.models; if (d.lanes) { LANE.system.model = d.lanes.system.model; LANE.project.model = d.lanes.project.model; laneChip(LANE.system); laneChip(LANE.project); renderPanel(); }
+  Object.assign(S, { airMouse: !!d.airMouse, engineVoice: !!d.engineVoice, atHome: !!d.atHome, graph: d.graph, project: d.project, hangar: d.hangar || [], commits: d.commits || [], dirty: d.dirty || 0, schedule: d.schedule || [], handoffs: d.handoffs || [], control: d.control, brain: d.brain || S.brain }); layout(); renderTop(); renderSide(); inspect(); }
+function onEvent({ type, data }) {
+  switch (type) {
+    case 'hello': if (S.build && data.build && data.build !== S.build) return location.reload(); S.build = data.build || S.build; applyState(data); break;
+    case 'project': applyState(data); break;
+    case 'graph': S.graph = data; layout(); renderTop(); inspect(); break;
+    case 'git': S.commits = data.commits; S.dirty = data.dirty; renderSide(); break;
+    case 'schedule': S.schedule = data; renderSide(); break;
+    case 'handoffs': S.handoffs = data; renderSide(); break;
+    case 'control': S.control = data; renderTop(); break;
+    case 'heard': $('heard').textContent = '“' + data.text + '”'; act((data.source === 'schedule' ? 'Scheduled: ' : 'You: ') + data.text, 'you', data.lane); break;
+    case 'activity': act(data.text, data.kind, data.lane); break;
+    case 'models': S.models = data.models; renderPanel(); break;
+    case 'status': if (data.state !== 'thinking') endWork(data.lane || 'system'); else busy = true; if (!speaking) setState(busy ? 'thinking' : 'idle'); break;
+    case 'say': act('Kacy: ' + data.text, 'kacy', data.lane); lastSpoken = data.text; lastSpokenAt = Date.now(); noteSpoken(data.text); if (S.engineVoice) $('said').textContent = data.text; else say(data.text); break;
+    case 'retire': retired = true; micOn = false; try { rec && rec.abort(); } catch {} try { speechSynthesis.cancel(); } catch {} handsOn = false; es && es.close(); $('said').textContent = 'Kacy moved to a newer window. Close this one.'; micNote('this window is retired', true); setTimeout(() => { try { window.close(); } catch {} }, 1500); break;
+    case 'speaking': onSpeaking(data.on, data.question); break;
+    case 'code': addCode(data); { const hit = S.graph.parts.find((p) => (p.files || []).some((f) => String(data.file || '').endsWith(f))); if (hit && view.get(hit.id)) view.get(hit.id).flash = T + 0.5; } break;
+    case 'touch': if (data.part && view.get(data.part)) view.get(data.part).flash = T + 0.4; break;
+    case 'tool': break;
+    case 'log': act('Claude Code error, details in the work stream', 'fail', data.lane); addCode({ file: 'log', action: 'error', code: data.text }); break;
+    case 'done': { const L = laneOf(data.lane); L.cost += data.cost || 0; L.tok += data.tokens || 0; if (data.model) L.model = data.model; laneChip(L); S.cost += data.cost || 0; S.tokens += data.tokens || 0; renderTop(); break; }
+  }
+}
+async function boot() {
+  requestAnimationFrame(frame);
+  try { const r = await fetch('/api/state'); if (!r.ok) throw 0; const st = await r.json(); S.build = st.build; applyState(st); es = new EventSource('/events'); es.onmessage = (m) => onEvent(JSON.parse(m.data)); startMic(true); if (PREF.clap) startClap(); }
+  catch { startDemo(); }
+}
+
+/* ───────────────────────── preview mode: plays a sample build when no engine is attached ───────────────────────── */
+function demoReply(text) { $('heard').textContent = '“' + text + '”'; say('In the desktop app I hand that to Claude Code and the parts appear as the code is written. This is a preview.', true); }
+function startDemo() {
+  S.demo = true; document.body.classList.add('demo'); S.project = '/demo'; S.hangar = [{ name: 'rag-assistant', path: '/demo', hasDesk: true }]; S.graph = { name: 'rag-assistant', parts: [], links: [] };
+  const add = (id, name, type, description, files) => { S.graph.parts.push({ id, name, type, description, files, status: 'planned' }); };
+  const st = (id, status) => { S.graph.parts.find((p) => p.id === id).status = status; };
+  const wire = (from, to, label) => S.graph.links.push({ from, to, label });
+  const commit = (hash, subject) => { S.commits.unshift({ hash, subject, when: 'just now', author: 'kacy' }); };
+  const steps = [
+    [600, () => { S.models = { system: 'haiku', project: 'opus', mode: 'auto' }; renderPanel(); act('You: build a retrieval assistant for my notes', 'you', 'project'); act('Thinking… (opus)', 'think', 'project'); say('Laying out a retrieval assistant.', true); setState('thinking'); add('llm', 'Core LLM', 'llm', 'Answers using retrieved context.', ['src/llm.py']); }],
+    [1500, () => { add('encoder', 'Encoder', 'encoder', 'Turns text into embeddings.', ['src/encoder.py']); wire('encoder', 'llm', 'context'); }],
+    [1300, () => { add('store', 'Vector store', 'database', 'Holds document embeddings.', ['src/store.py']); wire('store', 'encoder', 'vectors'); }],
+    [1300, () => { add('retriever', 'Retriever agent', 'agent', 'Finds the passages worth reading.', ['src/retriever.py']); wire('retriever', 'store', 'query'); wire('retriever', 'llm', 'passages'); Object.assign(S.graph.links.find((l) => l.from === 'retriever' && l.to === 'store'), { where: 'src/retriever.py:7', how: 'self.store.search(q)' }); }],
+    [1200, () => { add('api', 'Chat API', 'api', 'HTTP endpoint for the app.', ['src/api.py']); wire('api', 'retriever', 'question'); wire('llm', 'api', 'answer'); }],
+    [1200, () => { add('ui', 'Chat window', 'ui', 'What the user sees.', ['web/chat.html']); wire('ui', 'api', 'request'); add('docs', 'Documents', 'data', 'Source files to index.', ['data/']); wire('docs', 'store', 'chunks'); }],
+    [1400, () => { add('trainer', 'Fine-tune job', 'trainer', 'Adapts the model overnight.', ['train/finetune.py']); wire('trainer', 'llm', 'weights'); }],
+    [1500, () => { act('You: play some lofi while this builds', 'you', 'system'); act('Finding "lofi" on YouTube', 'tool', 'system'); act('Creating src/encoder.py', 'tool', 'project'); st('encoder', 'building'); addCode({ file: 'src/encoder.py', action: 'write', code: 'from sentence_transformers import SentenceTransformer\n\nclass Encoder:\n    def __init__(self, name="all-MiniLM-L6-v2"):\n        self.model = SentenceTransformer(name)\n\n    def embed(self, texts: list[str]):\n        return self.model.encode(texts, normalize_embeddings=True)' }); }],
+    [2600, () => { act('Kacy: Playing lofi.', 'kacy', 'system'); act('Done', 'done', 'system'); act('Creating src/store.py', 'tool', 'project'); st('encoder', 'ready'); st('store', 'building'); commit('a3f91c2', 'Add encoder part'); addCode({ file: 'src/store.py', action: 'write', code: 'import numpy as np\n\nclass VectorStore:\n    def __init__(self):\n        self.vecs, self.docs = [], []\n\n    def add(self, vec, doc):\n        self.vecs.append(vec); self.docs.append(doc)\n\n    def search(self, q, k=4):\n        scores = np.array(self.vecs) @ q\n        return [self.docs[i] for i in scores.argsort()[-k:][::-1]]' }); }],
+    [2600, () => { act('You: open System Settings and click Wi-Fi', 'you', 'system'); act('Opening System Settings', 'tool', 'system'); act('Creating src/retriever.py', 'tool', 'project'); st('store', 'ready'); st('docs', 'ready'); st('retriever', 'building'); commit('7be0d41', 'Add vector store with cosine search'); addCode({ file: 'src/retriever.py', action: 'write', code: 'class Retriever:\n    def __init__(self, encoder, store):\n        self.encoder, self.store = encoder, store\n\n    def __call__(self, question: str):\n        q = self.encoder.embed([question])[0]\n        return self.store.search(q)' }); }],
+    [2400, () => { act('Clicking "Wi-Fi" in System Settings', 'tool', 'system'); act('Running: pytest tests/test_retriever.py -q', 'tool', 'project'); st('retriever', 'ready'); st('llm', 'building'); addCode({ file: 'terminal', action: 'run', code: 'pytest tests/test_retriever.py -q\n....                                    [100%]\n4 passed in 0.82s' }); commit('c19e7aa', 'Retriever agent wired to store'); }],
+    [2400, () => { act('Done in 4s', 'done', 'system'); act('Wiring Chat API → Retriever agent', 'tool', 'project'); st('llm', 'ready'); st('api', 'building'); say('Core is answering. Wiring the API.', true); }],
+    [2200, () => { st('api', 'ready'); st('ui', 'ready'); commit('e44b0f8', 'Chat API and window'); runPulse = T + 6; }],
+    [1800, () => { S.schedule.push({ id: 'j1', at: new Date(new Date().setHours(17, 0, 0, 0) + (new Date().getHours() >= 17 ? 864e5 : 0)).toISOString(), instruction: 'Continue the fine-tune run from the last checkpoint', status: 'waiting' }); say('Fine-tune is queued for five p m.', true); }],
+    [1800, () => { act('Kacy: Retrieval assistant is built and on the desk.', 'kacy', 'project'); act('Done in 21s', 'done', 'project'); S.handoffs.push({ id: 'h1', what: 'Old checkpoints are using 3 GB. I do not delete, so this one is yours.', command: 'rm -r train/checkpoints/run-01', done: false }); setState('idle'); }],
+    [2500, () => { setExplode(true); }], [4200, () => { setExplode(false); }],
+    [6000, () => { st('trainer', 'building'); }], [5000, () => { st('trainer', 'ready'); commit('0d2a6b3', 'Fine-tuned weights loaded'); }],
+  ];
+  let i = 0; (function next() { if (i >= steps.length) return; const [wait, fn] = steps[i++]; setTimeout(() => { fn(); layout(); renderTop(); renderSide(); inspect(); next(); }, wait); })();
+  renderTop(); renderSide();
+}
+boot();
+</script>
+</body>
+</html>

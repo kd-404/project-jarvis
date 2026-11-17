@@ -12,6 +12,7 @@ const { Scheduler } = require('./scheduler');
 const control = require('./control');
 const { Quick } = require('./quick');
 const { route } = require('./router');
+const sysinfo = require('./sysinfo');
 
 function start({ port = Number(process.env.KACY_PORT) || 7718, projectsRoot, quiet = false } = {}) {
   const ROOT = path.resolve(__dirname, '..');
@@ -199,6 +200,10 @@ function start({ port = Number(process.env.KACY_PORT) || 7718, projectsRoot, qui
         clients.add(res); req.on('close', () => clients.delete(res)); return;
       }
       if (req.method === 'GET' && url.pathname === '/api/state') return json(res, 200, snapshot());
+      if (req.method === 'GET' && url.pathname === '/api/sys') { // CPU / memory for the bottom bar
+        if (!sameOrigin(req)) return json(res, 403, { error: 'cross-origin request refused' });
+        return sysinfo.stats([brains.system.proc?.pid, brains.project.proc?.pid]).then((d) => json(res, 200, d), (e) => json(res, 200, { error: e.message }));
+      }
       if (req.method === 'GET' && url.pathname === '/api/file') {
         if (!cfg.project) return json(res, 400, { error: 'no project open' });
         let p = path.resolve(cfg.project, url.searchParams.get('path') || '');

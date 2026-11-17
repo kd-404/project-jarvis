@@ -8,6 +8,8 @@
   :root { --bg:#04070c; --ink:#d4ecf7; --dim:#5d7b92; --line:#16303f; --cy:#5fe3ff; --am:#ffb547; --rd:#ff5468; --gn:#7dffb0; --panel:rgba(6,14,22,.78);
     --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
   * { box-sizing: border-box; }
+  body { --lw:322px; --rw:302px; --bot:102px; --fb:40px; }
+  body.minL { --lw:52px; } body.minR { --rw:52px; } body.noSys { --bot:74px; --fb:12px; }
   html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font:12px/1.5 var(--mono); overflow:hidden; }
   canvas#bench { position:fixed; inset:0; width:100%; height:100%; display:block; cursor:grab; }
   canvas#bench:active { cursor:grabbing; }
@@ -41,8 +43,16 @@
   .grow { flex:1; }
   #meter { color:var(--dim); font-size:10px; letter-spacing:.1em; white-space:nowrap; }
 
-  #codeRail { top:70px; left:12px; bottom:74px; width:310px; display:flex; flex-direction:column; }
-  #sideRail { top:70px; right:12px; bottom:74px; width:290px; display:flex; flex-direction:column; }
+  #codeRail { top:70px; left:12px; bottom:var(--bot); width:calc(var(--lw) - 12px); display:flex; flex-direction:column; transition:width .22s ease; }
+  #sideRail { top:70px; right:12px; bottom:var(--bot); width:calc(var(--rw) - 12px); display:flex; flex-direction:column; transition:width .22s ease; }
+  .lane > h2:first-child { padding-right:34px; position:relative; }
+  .minBtn { position:absolute; right:6px; top:5px; border:0; padding:0 6px; font-size:13px; line-height:18px; color:var(--dim); text-transform:none; letter-spacing:0; }
+  .railTab { display:none; flex:1; border:0; padding:10px 0; writing-mode:vertical-rl; text-orientation:mixed; letter-spacing:.3em; font-size:10px; color:var(--dim); text-transform:uppercase; }
+  .railTab i { font-style:normal; display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--line); margin-top:10px; }
+  .lane.min > *:not(.railTab) { display:none !important; } .lane.min .railTab { display:block; }
+  .lane[data-lane=system].min .railTab { color:var(--cy); } .lane[data-lane=project].min .railTab { color:var(--am); }
+  .lane.min.busy .railTab i { background:var(--am); animation:blink .7s ease-in-out infinite alternate; }
+  .lane.min.fresh .railTab i { background:var(--cy); }
   .scroll { overflow:auto; flex:1; min-height:0; scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
   .entry { border-bottom:1px solid var(--line); padding:8px 12px; }
   .entry .f { display:flex; justify-content:space-between; gap:8px; color:var(--cy); font-size:11px; }
@@ -62,7 +72,7 @@
   @keyframes sweep { from { background-position:200% 0; } to { background-position:-200% 0; } }
   .laneSub { padding:5px 12px; color:var(--dim); font-size:9.5px; letter-spacing:.1em; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:8px; }
   .lane[data-lane=project] .act::before { color:var(--am); } .lane[data-lane=project] .act.kacy { color:var(--am); }
-  #panel { top:70px; right:314px; width:330px; max-height:calc(100% - 160px); display:none; flex-direction:column; z-index:5; }
+  #panel { top:70px; right:calc(var(--rw) + 12px); width:330px; max-height:calc(100% - 160px); display:none; flex-direction:column; z-index:5; }
   #panel.show { display:flex; } #panel .body { padding:4px 14px 14px; overflow:auto; scrollbar-width:thin; }
   #panel h4 { margin:14px 0 6px; font-size:9px; letter-spacing:.2em; color:var(--cy); font-weight:600; }
   #panel label { display:grid; grid-template-columns:1fr auto; gap:3px 8px; align-items:center; margin-bottom:9px; color:var(--ink); }
@@ -93,7 +103,7 @@
   .job code { display:block; margin-top:4px; padding:4px 6px; background:rgba(255,84,104,.08); border:1px dashed rgba(255,84,104,.4); color:#ffc3cb; word-break:break-all; }
   .job.off { opacity:.45; }
 
-  #inspector { left:334px; bottom:74px; width:370px; max-height:calc(100% - 160px); display:none; flex-direction:column; }
+  #inspector { left:calc(var(--lw) + 12px); bottom:var(--bot); width:370px; max-height:calc(100% - 160px); display:none; flex-direction:column; }
   #inspector.show { display:flex; }
   #inspector .body { padding:10px 12px; overflow:auto; scrollbar-width:thin; }
   #inspector h4 { margin:12px 0 4px; font-size:9px; letter-spacing:.2em; color:var(--dim); font-weight:600; }
@@ -114,25 +124,38 @@
   #inspector a { color:var(--ink); display:block; cursor:pointer; text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:3px; }
   #inspector a:hover { color:var(--cy); }
 
-  footer { left:12px; right:12px; bottom:12px; height:50px; display:flex; align-items:center; gap:10px; padding:0 12px; }
+  footer { left:12px; right:12px; bottom:var(--fb); height:50px; display:flex; align-items:center; gap:10px; padding:0 12px; }
   #heard { color:var(--dim); max-width:44%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #said { color:var(--ink); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #cmd { flex:0 0 34%; background:rgba(95,227,255,.05); border:1px solid var(--line); padding:8px 10px; }
   #cmd::placeholder { color:var(--dim); }
 
-  #camBox { right:314px; bottom:74px; width:200px; height:150px; display:none; overflow:hidden; }
+  #camBox { right:calc(var(--rw) + 12px); bottom:var(--bot); width:200px; height:150px; display:none; overflow:hidden; }
   #camBox.show { display:block; }
   #cam { display:none; }
-  #camfx { width:100%; height:100%; display:block; }
-  #camBox span { position:absolute; left:8px; top:6px; font-size:9px; letter-spacing:.18em; color:var(--cy); }
+  #camInner, #camfx { width:100%; height:100%; display:block; }
+  #camLbl { position:absolute; left:8px; top:6px; font-size:9px; letter-spacing:.18em; color:var(--cy); }
+  #camPop { position:absolute; right:4px; bottom:4px; padding:2px 6px; font-size:9px; background:rgba(4,7,12,.7); }
+  #sysbar { left:12px; right:12px; bottom:8px; height:26px; display:flex; align-items:center; gap:18px; padding:0 12px; font-size:10px; letter-spacing:.12em; color:var(--dim); }
+  body.noSys #sysbar { display:none; }
+  #sysbar .m { display:flex; align-items:center; gap:7px; white-space:nowrap; } #sysbar b { color:var(--ink); font-weight:500; }
+  #sysbar .bar { width:64px; height:5px; background:rgba(95,227,255,.1); position:relative; overflow:hidden; }
+  #sysbar .bar i { position:absolute; left:0; top:0; bottom:0; width:0; background:var(--cy); transition:width .6s ease; }
+  #sysbar .bar.warm i { background:var(--am); } #sysbar .bar.hot i { background:var(--rd); }
+  #sysbar .x { margin-left:auto; border:0; padding:0 4px; color:var(--dim); }
+  #help { top:70px; right:calc(var(--rw) + 12px); width:400px; max-height:calc(100% - 180px); display:none; flex-direction:column; z-index:6; }
+  #help.show { display:flex; } #help .body { padding:4px 14px 14px; overflow:auto; scrollbar-width:thin; }
+  #help h4 { margin:14px 0 6px; font-size:9px; letter-spacing:.2em; color:var(--cy); font-weight:600; }
+  #help table { width:100%; border-collapse:collapse; } #help td { padding:3px 0; vertical-align:top; border-bottom:1px solid rgba(22,48,63,.6); }
+  #help td:first-child { color:var(--am); width:42%; padding-right:10px; } #help p { color:var(--dim); margin:6px 0 0; font-size:10.5px; }
 
-  #telemetry { position:fixed; left:346px; top:78px; color:var(--dim); font-size:10px; letter-spacing:.14em; line-height:1.9; pointer-events:none; text-transform:uppercase; }
+  #telemetry { position:fixed; left:calc(var(--lw) + 24px); top:78px; color:var(--dim); font-size:10px; letter-spacing:.14em; line-height:1.9; pointer-events:none; text-transform:uppercase; }
   #telemetry b { color:var(--cy); font-weight:500; }
   #hint { position:fixed; right:314px; top:78px; color:var(--dim); font-size:10px; letter-spacing:.1em; text-align:right; line-height:1.9; pointer-events:none; }
   #demoTag { display:none; color:var(--am); border:1px solid var(--am); padding:2px 7px; font-size:9px; letter-spacing:.2em; }
   body.demo #demoTag { display:inline-block; }
-  @media (max-width: 980px) { #codeRail { width:230px; } #sideRail { display:none; } #panel { right:12px; } #hint { right:12px; } #telemetry { left:254px; } #inspector { left:254px; } #heard { display:none; } }
-  @media (max-width: 640px) { #codeRail, #telemetry, #hint, #meter, #state { display:none; } #inspector { left:12px; right:12px; width:auto; } #cmd { flex:1; } #said { display:none; } }
+  @media (max-width: 980px) { body { --lw:242px; --rw:12px; } body.minL { --lw:52px; } #sideRail { display:none; } #heard { display:none; } }
+  @media (max-width: 640px) { body { --lw:12px; } #codeRail, #telemetry, #meter, #state, #sysbar .opt { display:none; } #inspector { left:12px; right:12px; width:auto; } #cmd { flex:1; } #said { display:none; } }
   @media (prefers-reduced-motion: reduce) { #orb, #orb::after { animation:none !important; } }
 </style>
 </head>
@@ -145,6 +168,7 @@
   <select id="project" aria-label="Project"></select>
   <div class="grow"></div>
   <div id="meter"></div>
+  <button id="helpBtn" title="Gestures, voice commands and keys (?)" aria-label="Help">?</button>
   <button id="cfg" title="Models, air mouse sensitivity, clap">Controls</button>
   <button id="mic" title="Wake word listening">Voice</button>
   <button id="hands" title="Hand gestures through the camera">Gestures</button>
@@ -155,17 +179,19 @@
 </header>
 
 <aside id="codeRail" class="panel lane" data-lane="system">
-  <h2>SYSTEM LANE <b id="mS"></b></h2><div class="laneSub">Mac control · quick answers · instant commands<span id="uS"></span></div>
+  <h2>SYSTEM LANE <b id="mS"></b><button class="minBtn" data-rail="L" title="Minimize ( [ )" aria-label="Minimize system lane">‹</button></h2><div class="laneSub">Mac control · quick answers · instant commands<span id="uS"></span></div>
   <div id="actsS" class="acts"><div class="empty">Opening apps, clicking, playing music and quick questions run here, on the small fast model.</div></div>
   <div class="sec"><h2>SCHEDULE</h2><div class="scroll" id="schedule"><div class="empty">No scheduled tasks.</div></div></div>
   <div class="sec"><h2>YOUR HANDS ONLY</h2><div class="scroll" id="handoffs"><div class="empty">Kacy never deletes. Removals wait here for you.</div></div></div>
+  <button class="railTab" data-rail="L" title="Show the system lane ( [ )">system lane<i></i></button>
 </aside>
 
 <aside id="sideRail" class="panel lane" data-lane="project">
-  <h2>PROJECT LANE <b id="mP"></b></h2><div class="laneSub">research · building<span id="uP"></span></div>
+  <h2>PROJECT LANE <b id="mP"></b><button class="minBtn" data-rail="R" title="Minimize ( ] )" aria-label="Minimize project lane">›</button></h2><div class="laneSub">research · building<span id="uP"></span></div>
   <div id="actsP" class="acts"><div class="empty">Research and builds run here on the strong model, in parallel with the system lane.</div></div>
   <h2 class="mid">WORK STREAM <b id="codeN"></b></h2><div class="scroll" id="code"><div class="empty">Code, notes and research appear here as Kacy works.</div></div>
   <div class="sec"><h2>COMMITS <b id="dirty"></b></h2><div class="scroll" id="commits"><div class="empty">No commits yet.</div></div></div>
+  <button class="railTab" data-rail="R" title="Show the project lane ( ] )">project lane<i></i></button>
 </aside>
 
 <div id="panel" class="panel">
@@ -180,7 +206,9 @@
     <label>Cursor speed <output id="oSpeed"></output><input id="rSpeed" type="range" min="0.5" max="3" step="0.1"></label>
     <label>Steadiness <output id="oSmooth"></output><input id="rSmooth" type="range" min="0" max="0.9" step="0.05"></label>
     <label>Pinch sensitivity <output id="oPinch"></output><input id="rPinch" type="range" min="0.2" max="0.55" step="0.01"></label>
-    <label>Hold to drag <output id="oHold"></output><input id="rHold" type="range" min="250" max="900" step="50"></label>
+    <label>Drag and select with <small>grab = close your hand to hold the mouse down, open it to let go</small><select id="selDrag"><option value="grab">Grab (fist) · recommended</option><option value="pinch">Hold the pinch</option></select></label>
+    <label>Hold to drag <small>only for "hold the pinch"</small><output id="oHold"></output><input id="rHold" type="range" min="250" max="900" step="50"></label>
+    <label class="check"><input id="cFloat" type="checkbox"> Float the camera over every app while gestures are on</label>
     <h4>CLAP</h4>
     <label class="check"><input id="cClap" type="checkbox"> Double clap turns gestures and the air mouse on or off</label>
     <label>Clap loudness needed <output id="oClap"></output><input id="rClap" type="range" min="0.1" max="0.8" step="0.05"></label>
@@ -188,14 +216,60 @@
 </div>
 
 <div id="inspector" class="panel"><h2>PART <button id="insX" style="border:0;padding:0">close</button></h2><div class="body" id="insBody"></div></div>
-<div id="camBox" class="panel"><video id="cam" playsinline muted></video><canvas id="camfx" width="200" height="150"></canvas><span id="camLbl">HANDS</span></div>
+<div id="camBox" class="panel"><video id="cam" playsinline muted></video><div id="camInner"><canvas id="camfx" width="240" height="180"></canvas><span id="camLbl">HANDS</span></div><button id="camPop" title="Float the camera over every app and tab">⧉ float</button></div>
 <div id="telemetry"></div>
-<div id="hint">double clap = gestures on / off · finger = mouse · quick pinch = click · held pinch = drag<br>two fingers = scroll · open hand: swipe = desktops, hold = all windows, then fist = back<br>E explode · Space = talk now · Esc stop</div>
+<div id="help" class="panel" role="dialog" aria-label="Help">
+  <h2>HELP <button id="helpX" style="border:0;padding:0">close</button></h2>
+  <div class="body">
+    <h4>AIR MOUSE · moves the real Mac cursor</h4>
+    <table>
+      <tr><td>☝ index finger up</td><td>move the cursor</td></tr>
+      <tr><td>🤏 pinch</td><td>click · pinch twice fast = double click</td></tr>
+      <tr><td>✊ close hand (grab)</td><td>hold the mouse down: move to select text, drag a window, or turn the desk. Open your hand to let go</td></tr>
+      <tr><td>🤟 three fingers up</td><td>right click</td></tr>
+      <tr><td>✌ two fingers up</td><td>scroll: move your hand up or down</td></tr>
+      <tr><td>🖐 open hand, swipe</td><td>next / previous desktop</td></tr>
+      <tr><td>🖐 open hand, hold still</td><td>show all windows, then pinch one</td></tr>
+    </table>
+    <h4>ON THE DESK · air mouse off</h4>
+    <table>
+      <tr><td>✊ grab and move</td><td>rotate the view</td></tr>
+      <tr><td>🤏 pinch a part</td><td>select it</td></tr>
+      <tr><td>✌ two fingers up / down</td><td>zoom</td></tr>
+      <tr><td>🤏🤏 both hands pinched</td><td>pull apart = explode and zoom in · push together = assemble</td></tr>
+    </table>
+    <h4>VOICE · say “Kacy” first</h4>
+    <table>
+      <tr><td>enable / disable air mouse</td><td>also: “gestures on / off”, “air mouse faster / slower”</td></tr>
+      <tr><td>hide / show panels</td><td>also: “hide the left panel”, “show project lane”, “focus mode”</td></tr>
+      <tr><td>show CPU · how is my CPU</td><td>bottom bar on, and she reads it out · “hide CPU”</td></tr>
+      <tr><td>top / front / side view</td><td>also: “rotate left / right”, “spin on / off”, “zoom in / out”, “explode”, “assemble”</td></tr>
+      <tr><td>open controls · show help</td><td>“close help”, “close controls”</td></tr>
+      <tr><td>float the camera</td><td>camera floats over every app (needs one click on the desk first)</td></tr>
+      <tr><td>stop · stop everything</td><td>“stop” quiets her, “stop everything” also stops the work</td></tr>
+    </table>
+    <h4>KEYS</h4>
+    <table>
+      <tr><td>Space</td><td>talk now, no wake word</td></tr>
+      <tr><td>[ and ]</td><td>minimize / restore the left and right panels</td></tr>
+      <tr><td>? · E · Esc</td><td>help · explode · stop everything</td></tr>
+    </table>
+    <p>Double clap turns gestures and the air mouse on or off.</p>
+  </div>
+</div>
 
 <footer class="panel">
   <div id="heard"></div><div id="said">Say “Kacy”, or type below.</div>
   <input id="cmd" placeholder="Ask Kacy anything…" autocomplete="off" aria-label="Command">
 </footer>
+<div id="sysbar" class="panel" aria-label="Computer load">
+  <span class="m">MAC CPU <span class="bar" id="bCpu"><i></i></span><b id="vCpu">—</b></span>
+  <span class="m">MEMORY <span class="bar" id="bMem"><i></i></span><b id="vMem">—</b></span>
+  <span class="m opt">KACY <b id="vKacy">—</b></span>
+  <span class="m opt">BRAIN <b id="vBrain">—</b></span>
+  <span class="m opt">LOAD <b id="vLoad">—</b></span>
+  <button class="x" id="sysX" title="Hide (say “hide CPU”)">×</button>
+</div>
 
 <script>
 'use strict';
@@ -293,12 +367,13 @@ function strokeSegs(segs, ox, oy, oz, sc, rot, color, alpha, upto, dash) {
 }
 
 let selected = null, hoverId = null, runPulse = 0, last = performance.now();
+const SPIN = { off: false };
 const pointer = { on: false, down: false, x: 0, y: 0 };
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now; T += dt;
   cam.dist += (cam.tDist - cam.dist) * Math.min(1, dt * 4);
   cam.explode += (cam.tExplode - cam.explode) * Math.min(1, dt * 5);
-  if (!dragging && !handActive && !matchMedia('(prefers-reduced-motion: reduce)').matches) cam.yaw += dt * 0.05;
+  if (!dragging && !handActive && !SPIN.off && !matchMedia('(prefers-reduced-motion: reduce)').matches) cam.yaw += dt * 0.05;
   const E = cam.explode;
   { const sv = selected && view.get(selected), k = Math.min(1, dt * 3.5); // glide the camera onto the selected part
     cam.fx += ((sv ? sv.x : 0) - cam.fx) * k; cam.fy += ((sv ? sv.y : 0) - cam.fy) * k; cam.fz += ((sv ? sv.z : 0) - cam.fz) * k; cam.cx += ((sv && W > 980 ? 0.63 : 0.5) - cam.cx) * k; }
@@ -444,6 +519,7 @@ function act(text, kind = 'tool', lane = 'system') {
   const el = document.createElement('div'); el.className = 'act ' + kind + (kind === 'tool' || kind === 'think' ? ' live' : '');
   el.innerHTML = `<time>${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</time>${esc(text)}`;
   box.prepend(el); while (box.children.length > 60) box.lastChild.remove();
+  if (box.parentElement.classList.contains('min')) box.parentElement.classList.add('fresh');
   if (kind === 'tool' || kind === 'think') { if (!L.busy) { L.busy = true; L.start = Date.now(); L.tick = setInterval(() => laneChip(L), 500); box.parentElement.classList.add('busy'); } busy = true; setState('thinking', (lane === 'project' ? 'project: ' : 'system: ') + text); }
   if (kind === 'done') endWork(lane);
 }
@@ -501,7 +577,8 @@ function setState(s, label) { document.body.dataset.state = s; $('state').title 
 const WAKE = /\b(?:(?:hey|hi|ok|okay|yo)\s+)?(?:(?:k|c|g|st|tr|t|l|j)a(?:s|c|ss)(?:i|y|ey|ee|ie)|(?:k|c)(?:e|ay|ei|ai)(?:s|c|ss)(?:i|y|ey|ee|ie)|jay\s?(?:see|c|cee)|[kj]\.?\s?c\.?|kay\s?(?:see|sea|c)|kc)\b[\s,.!?]*/i;
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let retired = false, es = null;
-let rec = null, micOn = false, awakeUntil = 0, speaking = false, micFails = 0;
+let rec = null, micOn = false, awakeUntil = 0, speaking = false, micFails = 0, netFails = 0, micStartedAt = 0;
+const LOCAL = { tried: false, on: false, lang: '' };
 let lastDiag = '';
 const diag = (t) => { if (S.demo || t === lastDiag) return; lastDiag = t; fetch('/api/log', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: t }) }).catch(() => {}); };
 const micNote = (t, bad) => { $('heard').textContent = t; $('heard').style.color = bad ? 'var(--rd)' : ''; if (bad) diag(t); };
@@ -564,10 +641,11 @@ const MIC_ERRORS = {
 function startMic(auto) {
   if (!SR) { micNote('voice: this browser has no speech recognition, use Google Chrome · ' + navigator.userAgent, true); return; }
   if (rec) { try { rec.onend = null; rec.stop(); } catch {} }
-  rec = new SR(); rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 4; rec.lang = /^en/i.test(navigator.language || '') ? navigator.language : 'en-IN';
-  rec.onstart = () => { diag('voice started, lang ' + rec.lang + ', ' + navigator.userAgent); micOn = true; micFails = 0; $('mic').classList.add('on'); $('mic').textContent = 'Voice: on'; micNote('voice on · say “Kacy …”'); };
+  rec = new SR(); rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 4; rec.lang = LOCAL.on ? LOCAL.lang : PREF.lang || 'en-IN'; // Indian English by default
+  if (LOCAL.on) { try { rec.processLocally = true; } catch {} }
+  rec.onstart = () => { if (Date.now() - micStartedAt > 60000) diag('voice started, lang ' + rec.lang + (LOCAL.on ? ' (on this Mac)' : '') + ', ' + navigator.userAgent); micStartedAt = Date.now(); micOn = true; $('mic').classList.add('on'); $('mic').textContent = 'Voice: on'; if (!netFails) micNote('voice on · say “Kacy …”'); };
   rec.onresult = (e) => {
-    micFails = 0; diag('voice is receiving speech');
+    if (micFails || netFails) diag('voice is receiving speech'); micFails = 0; netFails = 0;
     for (let i = e.resultIndex; i < e.results.length; i++) {
       if (speaking) { const heardNow = Array.from(e.results[i]).map((a) => a.transcript).find((t) => bargeIn(t)); continue; }
       // the recogniser offers several spellings of what it heard; take the first one that contains the name
@@ -589,20 +667,32 @@ function startMic(auto) {
     if (e.error === 'no-speech' || e.error === 'aborted') return;
     micFails++; diag('voice error: ' + e.error + ' ' + (e.message || ''));
     if (e.error === 'language-not-supported') rec.lang = 'en-US';
-    if (e.error === 'network') { micNote('voice: speech service hiccup, retrying…'); return; } // onend restarts it
+    if (e.error === 'network') { netFails++; micFails--; if (netFails >= 3) tryLocalSpeech(); micNote(`voice: can't reach the speech service, retrying in ${Math.round(netDelay() / 1000)}s`, netFails > 3); return; } // onend restarts it, slower each time
     const fatal = ['not-allowed', 'service-not-allowed', 'audio-capture'].includes(e.error);
     if (fatal) { micOn = false; $('mic').classList.remove('on'); $('mic').textContent = 'Voice'; }
     if (!(auto && e.error === 'not-allowed')) { micNote('voice: ' + (MIC_ERRORS[e.error] || e.error), true); $('said').textContent = MIC_ERRORS[e.error] || ('Voice error: ' + e.error); }
     else micNote('press Voice to turn the microphone on');
   };
-  rec.onend = () => { if (micOn && !retired) setTimeout(() => { if (micOn) { try { rec.start(); } catch {} } }, micFails > 2 ? 2500 : speaking ? 60 : 250); };
+  rec.onend = () => { if (micOn && !retired) setTimeout(() => { if (micOn) { try { rec.start(); } catch {} } }, netFails ? netDelay() : micFails > 2 ? 2500 : speaking ? 60 : 250); };
   try { rec.start(); } catch (err) { micNote('voice: ' + err.message, true); }
+}
+const netDelay = () => Math.min(30000, 1000 * 2 ** Math.max(0, netFails - 1)); // 1s, 2s, 4s … 30s instead of twice a second
+// Chrome can also recognise speech on the Mac itself, with no internet speech service. Use it when the service keeps failing.
+async function tryLocalSpeech() {
+  if (LOCAL.tried || LOCAL.on || !SR || typeof SR.available !== 'function') return; LOCAL.tried = true;
+  try {
+    for (const lang of [...new Set([PREF.lang || 'en-IN', 'en-US'])]) {
+      let st = await SR.available({ langs: [lang], processLocally: true }); diag('on-device speech ' + lang + ': ' + st);
+      if ((st === 'downloadable' || st === 'downloading') && typeof SR.install === 'function') st = (await SR.install({ langs: [lang], processLocally: true })) ? 'available' : st;
+      if (st === 'available') { LOCAL.on = true; LOCAL.lang = lang; netFails = 0; micNote('voice: switched to speech recognition on this Mac'); diag('switched to on-device speech, ' + lang); startMic(true); return; }
+    }
+  } catch (e) { diag('on-device speech not possible: ' + e.message); }
 }
 function stopMic() { micOn = false; try { rec && rec.stop(); } catch {} $('mic').classList.remove('on'); $('mic').textContent = 'Voice'; micNote('voice off'); }
 $('mic').onclick = () => { if (S.demo) return say('Voice needs the microphone, which works in the desktop app, not in this preview.', true); micOn ? stopMic() : startMic(false); };
 
 /* ───────────────────────── controls: models, air mouse feel, clap ───────────────────────── */
-const PREF = { speed: 1.6, smooth: 0.45, pinch: 0.34, hold: 450, clap: true, clapLevel: 0.35 };
+const PREF = { speed: 1.6, smooth: 0.45, pinch: 0.34, hold: 450, clap: true, clapLevel: 0.35, drag: 'grab', float: true, minL: false, minR: false, sys: true, lang: 'en-IN' };
 try { Object.assign(PREF, JSON.parse(localStorage.getItem('kacy-prefs') || '{}')); } catch {}
 const savePref = () => { try { localStorage.setItem('kacy-prefs', JSON.stringify(PREF)); } catch {} };
 const MODEL_CHOICES = [['', 'Your Claude Code default'], ['haiku', 'Haiku · smallest, fastest, cheapest'], ['sonnet', 'Sonnet · balanced'], ['opus', 'Opus · strongest'], ['fable', 'Fable · strongest']];
@@ -615,10 +705,74 @@ function renderPanel() {
 function bindRange(id, out, key, fmt) { const el = $(id); el.value = PREF[key]; $(out).textContent = fmt(PREF[key]); el.oninput = () => { PREF[key] = Number(el.value); $(out).textContent = fmt(PREF[key]); savePref(); }; }
 bindRange('rSpeed', 'oSpeed', 'speed', (v) => v.toFixed(1) + '×'); bindRange('rSmooth', 'oSmooth', 'smooth', (v) => Math.round(v * 100) + '%');
 bindRange('rPinch', 'oPinch', 'pinch', (v) => v < 0.28 ? 'needs a firm pinch' : v > 0.42 ? 'very easy' : 'normal'); bindRange('rHold', 'oHold', 'hold', (v) => v + ' ms'); bindRange('rClap', 'oClap', 'clapLevel', (v) => v < 0.25 ? 'soft claps count' : v > 0.5 ? 'loud claps only' : 'normal');
+$('selDrag').value = PREF.drag; $('selDrag').onchange = () => { PREF.drag = $('selDrag').value; savePref(); };
+$('cFloat').checked = !!PREF.float; $('cFloat').onchange = () => { PREF.float = $('cFloat').checked; savePref(); if (!PREF.float) closeFloat(); else if (handsOn) floatCam(); };
 $('cClap').checked = !!PREF.clap; $('cClap').onchange = () => { PREF.clap = $('cClap').checked; savePref(); PREF.clap ? startClap() : stopClap(); };
 for (const id of ['selS', 'selP', 'selMode']) $(id).onchange = () => { if (S.demo) return; api('/api/models', { system: $('selS').value, project: $('selP').value, mode: $('selMode').value }).then((r) => { if (r && !r.error) { S.models = r; renderPanel(); } }); };
-$('cfg').onclick = () => { $('panel').classList.toggle('show'); $('cfg').classList.toggle('on', $('panel').classList.contains('show')); };
-$('panelX').onclick = () => { $('panel').classList.remove('show'); $('cfg').classList.remove('on'); };
+$('cfg').onclick = () => showPanel(); $('panelX').onclick = () => showPanel(false);
+
+/* ───────────────────────── side panels, help, computer load ───────────────────────── */
+function setRail(side, min) { // side 'L' (system lane) or 'R' (project lane)
+  const key = 'min' + side, rail = $(side === 'L' ? 'codeRail' : 'sideRail');
+  PREF[key] = min == null ? !PREF[key] : !!min; savePref();
+  document.body.classList.toggle(key, PREF[key]); rail.classList.toggle('min', PREF[key]); if (!PREF[key]) rail.classList.remove('fresh');
+}
+document.querySelectorAll('[data-rail]').forEach((b) => (b.onclick = () => setRail(b.dataset.rail)));
+setRail('L', PREF.minL); setRail('R', PREF.minR);
+function showHelp(on) { const el = $('help'), v = on == null ? !el.classList.contains('show') : !!on; el.classList.toggle('show', v); $('helpBtn').classList.toggle('on', v); if (v) showPanel(false); }
+function showPanel(on) { const el = $('panel'), v = on == null ? !el.classList.contains('show') : !!on; el.classList.toggle('show', v); $('cfg').classList.toggle('on', v); if (v) showHelp(false); }
+$('helpBtn').onclick = () => showHelp(); $('helpX').onclick = () => showHelp(false);
+
+const SYS = { timer: 0, last: null };
+const gb = (b) => (b / 1073741824).toFixed(1), mb = (b) => b >= 1073741824 ? gb(b) + ' GB' : Math.round(b / 1048576) + ' MB';
+function meter(id, pct) { const el = $(id); el.firstChild.style.width = Math.min(100, pct) + '%'; el.classList.toggle('warm', pct >= 60 && pct < 85); el.classList.toggle('hot', pct >= 85); }
+async function pollSys() {
+  let d;
+  if (S.demo) { const t = Date.now() / 4000; d = { cpu: Math.round(22 + Math.sin(t) * 9), mem: { used: 5.8e9 + Math.sin(t / 2) * 3e8, total: 8.59e9 }, kacy: { cpu: 1.4, mem: 7.1e7 }, brain: { cpu: 6 + Math.sin(t) * 4, mem: 3.6e8, count: 2 }, load: 2.1 }; }
+  else d = await fetch('/api/sys').then((r) => r.json()).catch(() => null);
+  if (!d || d.error) return;
+  SYS.last = d; const memPct = 100 * d.mem.used / d.mem.total;
+  meter('bCpu', d.cpu); $('vCpu').textContent = d.cpu + '%';
+  meter('bMem', memPct); $('vMem').textContent = gb(d.mem.used) + ' / ' + Math.round(d.mem.total / 1073741824) + ' GB';
+  $('vKacy').textContent = Math.round(d.kacy.cpu) + '% · ' + mb(d.kacy.mem);
+  $('vBrain').textContent = d.brain.count ? Math.round(d.brain.cpu) + '% · ' + mb(d.brain.mem) : 'idle';
+  $('vLoad').textContent = (d.load || 0).toFixed(1);
+}
+function showSys(on) { PREF.sys = on == null ? !PREF.sys : !!on; savePref(); document.body.classList.toggle('noSys', !PREF.sys); clearInterval(SYS.timer); SYS.timer = 0; if (PREF.sys) { pollSys(); SYS.timer = setInterval(pollSys, 2000); } }
+$('sysX').onclick = () => showSys(false);
+function sysSentence() {
+  const d = SYS.last; if (!d) return 'Still measuring, ask me again in a second.';
+  const memPct = Math.round(100 * d.mem.used / d.mem.total);
+  return `CPU is at ${d.cpu} percent, memory ${gb(d.mem.used)} of ${Math.round(d.mem.total / 1073741824)} gigabytes, that is ${memPct} percent.` + (d.brain.count ? ` My brain is using ${Math.round(d.brain.cpu)} percent CPU and ${mb(d.brain.mem).replace('MB', 'megabytes').replace('GB', 'gigabytes')}.` : '') + (memPct > 85 ? ' Memory is tight, closing a few apps will help.' : '');
+}
+
+/* Floating camera: a small always-on-top window (Chrome document picture-in-picture), so you can see your hand
+   while the air mouse drives other apps and tabs. Chrome only opens it after a click or key press on the desk. */
+const camInner = $('camInner'), camFx = $('camfx'), camLblEl = $('camLbl');
+const PIP = { win: null, opening: false, closing: false, dismissed: false };
+function camShown() { $('camBox').classList.toggle('show', handsOn && !PIP.win); }
+async function floatCam(fromUser) {
+  if (PIP.win || PIP.opening || S.demo) return !!PIP.win;
+  if (!('documentPictureInPicture' in window)) { if (fromUser) say('This browser cannot float the camera. Use Google Chrome.', true); return false; }
+  if (!navigator.userActivation?.isActive) { $('camPop').textContent = '⧉ click to float'; return false; } // Chrome needs a click first
+  PIP.opening = true;
+  try {
+    const w = await documentPictureInPicture.requestWindow({ width: 260, height: 195 });
+    const st = w.document.createElement('style');
+    st.textContent = 'html,body{margin:0;height:100%;background:#04070c;overflow:hidden;font:10px ui-monospace,Menlo,monospace}#camInner,#camfx{width:100%;height:100%;display:block}#camLbl{position:fixed;left:8px;top:6px;letter-spacing:.18em;color:#5fe3ff;text-shadow:0 0 4px #000}';
+    w.document.head.append(st); w.document.title = 'Kacy · hands'; w.document.body.append(camInner);
+    w.addEventListener('pagehide', () => { $('cam').after(camInner); if (!PIP.closing && handsOn) PIP.dismissed = true; PIP.closing = false; PIP.win = null; camShown(); }); // closed by you = stays closed until you ask again
+    PIP.win = w; camShown(); diag('camera floating');
+    return true;
+  } catch (e) { diag('float camera failed: ' + e.message); return false; }
+  finally { PIP.opening = false; }
+}
+function closeFloat() { if (!PIP.win) return; PIP.closing = true; try { PIP.win.close(); } catch {} }
+$('camPop').onclick = () => { PIP.dismissed = false; floatCam(true); };
+// any click or key on the desk while gestures are on is the moment Chrome allows the floating window
+const autoFloat = () => { if (handsOn && PREF.float && !PIP.win && !PIP.dismissed) floatCam(); };
+addEventListener('pointerdown', autoFloat, true); addEventListener('keydown', autoFloat, true);
+try { navigator.mediaSession.setActionHandler('enterpictureinpicture', autoFloat); } catch {} // Chrome's automatic float when you switch away
 
 /* Double clap = gestures and air mouse on / off. Listens for two sharp, short bursts of sound close together. */
 const CLAP = { stream: null, ctx: null, timer: 0, floor: 0.02, last: 0, first: 0, quietSince: 0, cand: null };
@@ -643,17 +797,72 @@ async function startClap() {
 function stopClap() { clearInterval(CLAP.timer); CLAP.timer = 0; try { CLAP.stream && CLAP.stream.getTracks().forEach((t) => t.stop()); CLAP.ctx && CLAP.ctx.close(); } catch {} }
 function clapHeard(now) {
   CLAP.last = now;
-  if (CLAP.first && now - CLAP.first > 170 && now - CLAP.first < 750) { CLAP.first = 0; blip(handsOn ? 440 : 990, 160); diag('double clap: gestures ' + (handsOn ? 'off' : 'on')); if (!handsOn) $('air').classList.add('on'); $('hands').click(); }
+  if (CLAP.first && now - CLAP.first > 170 && now - CLAP.first < 750) { CLAP.first = 0; blip(handsOn ? 440 : 990, 160); diag('double clap: gestures ' + (handsOn ? 'off' : 'on')); if (!handsOn) $('air').classList.add('on'); setHands(!handsOn); }
   else CLAP.first = now;
 }
 
 /* ───────────────────────── commands ───────────────────────── */
 let busy = false;
 const api = (path, body) => fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) }).then((r) => r.json()).catch((e) => ({ error: e.message }));
+// Desk controls by voice. Handled right here in the window: no model, no delay.
+const OFFW = /\b(disable|deactivate|turn (it )?off|switch (it )?off|stop|close|hide|off|kill|minimi[sz]e|collapse|shrink|remove|no more)\b/;
+const ONW = /\b(enable|activate|turn (it )?on|switch (it )?on|start|open|show|on|maximi[sz]e|restore|expand|bring back|unhide)\b/;
+function deskVoice(t, typed) {
+  const ok = (msg) => { if (!typed && micOn) awakeUntil = Date.now() + 20000; blip(880, 60); say(msg, typed); return true; };
+  const off = OFFW.test(t), on = !off && ONW.test(t);
+  // air mouse (speech often hears "hair mouse", "air mouse", "a mouse")
+  if (/\b(air|hair|ear|are|her|err)[ -]?(mouse|most|mode)\b|\bmouse mode\b|\bairmouse\b/.test(t)) {
+    if (/\b(faster|quicker|speed up|more speed)\b/.test(t)) { PREF.speed = Math.min(3, +(PREF.speed + 0.3).toFixed(1)); savePref(); bindRange('rSpeed', 'oSpeed', 'speed', (v) => v.toFixed(1) + '×'); return ok('Air mouse faster.'); }
+    if (/\b(slower|slow down|less speed)\b/.test(t)) { PREF.speed = Math.max(0.5, +(PREF.speed - 0.3).toFixed(1)); savePref(); bindRange('rSpeed', 'oSpeed', 'speed', (v) => v.toFixed(1) + '×'); return ok('Air mouse slower.'); }
+    if (off) { setAir(false); return ok('Air mouse off. Gestures now move the desk only.'); }
+    setAir(true); if (S.control !== 'hands' && !S.demo) api('/api/control', { level: 'hands' });
+    if (handsOn) return ok('Air mouse on.');
+    setHands(true).then((r) => r && say('Air mouse on. Point to move, pinch to click, grab to drag.', typed)); return true;
+  }
+  if (/\b(gestures?|hand tracking|hand control|hand mode)\b/.test(t) && (on || off)) {
+    if (off) { setHands(false); return ok('Gestures off.'); }
+    setHands(true).then((r) => r && say('Gestures on.', typed)); return true;
+  }
+  // side panels
+  if (/\b(panels?|side ?bars?|rails?|lanes?)\b/.test(t) && (on || off) && !/\bsystem settings\b/.test(t)) {
+    const left = /\b(left|system)\b/.test(t), right = /\b(right|project)\b/.test(t), both = !left && !right || left && right;
+    if (both || left) setRail('L', off); if (both || right) setRail('R', off);
+    return ok((off ? 'Hid ' : 'Showing ') + (both ? 'both panels.' : left ? 'the system lane.' : 'the project lane.'));
+  }
+  if (/^(focus mode|clean (view|screen|desk)|clear the screen)$/.test(t)) { setRail('L', true); setRail('R', true); showHelp(false); showPanel(false); return ok('Focus mode.'); }
+  if (/^(show everything|normal (view|mode)|exit focus mode)$/.test(t)) { setRail('L', false); setRail('R', false); return ok('Everything is back.'); }
+  // help, controls
+  if (/^((show|open|close|hide) )?(the )?help( (tab|panel|page|screen))?$|\bwhat can i say\b|\b(gesture|gestures) (guide|help|list)\b|\bhow do i use (the )?(gestures|air mouse)\b/.test(t)) { if (off) { showHelp(false); return ok('Closed help.'); } showHelp(true); return ok('Here is the help.'); }
+  if (/\b(kacy |desk |the )?(controls|control panel|kacy settings|desk settings)\b/.test(t) && (on || off)) { if (off) { showPanel(false); return ok('Closed controls.'); } showPanel(true); return ok('Controls are open.'); }
+  // computer load
+  if (/\b(cpu|processor|system stats|(system|mac|computer|laptop) (performance|load)|memory usage|ram usage|ram|how much (ram|memory))\b/.test(t)) {
+    if (off) { showSys(false); return ok('Hid the CPU bar.'); }
+    showSys(true);
+    if (on && !/\b(how|what)\b/.test(t)) return ok('CPU bar is on.');
+    setTimeout(() => say(sysSentence(), typed), SYS.last ? 0 : 1300); if (!typed && micOn) awakeUntil = Date.now() + 20000; return true;
+  }
+  // floating camera
+  if (/\b(float|pop ?out|picture in picture|pip)\b.*\b(cam|camera|preview)\b|\bfloating camera\b/.test(t)) {
+    if (off) { closeFloat(); return ok('Camera is back on the desk.'); }
+    PIP.dismissed = false; PREF.float = true; savePref(); $('cFloat').checked = true;
+    if (!handsOn) { setHands(true); return ok('Gestures on. Click the desk once and the camera will float.'); }
+    floatCam(true).then((r) => say(r ? 'Camera is floating.' : 'Click anywhere on the desk once and the camera will float over every app.', typed)); return true;
+  }
+  // view angles
+  const VIEW = { top: [0.6, 1.3], front: [0, 0.12], side: [Math.PI / 2, 0.18], back: [Math.PI, 0.12], default: [0.6, 0.42] };
+  const vm = t.match(/^(top|front|side|back|default|normal) view$/); if (vm) { const [y, p] = VIEW[vm[1] === 'normal' ? 'default' : vm[1]]; cam.yaw = y; cam.pitch = p; SPIN.off = true; return ok(vm[1] + ' view.'); }
+  const rm = t.match(/^(rotate|turn|spin) (it )?(left|right)( a (bit|little))?$/); if (rm) { cam.yaw += rm[3] === 'left' ? -0.6 : 0.6; return ok('Rotated.'); }
+  if (/^(rotate|turn) (it )?(up|down)$/.test(t)) { cam.pitch = Math.max(-0.1, Math.min(1.35, cam.pitch + (/up/.test(t) ? 0.3 : -0.3))); return ok('Tilted.'); }
+  if (/^(spin|auto ?rotate|rotation)( on| off)?$|^(stop|start) (spinning|rotating|rotation)$/.test(t)) { SPIN.off = off; return ok(off ? 'Holding still.' : 'Spinning.'); }
+  // microphone
+  if (/^(stop|quit) listening$|^(mute|turn off) (the )?(mic|microphone)$/.test(t)) { ok('Microphone off. Press Voice or Space to talk again.'); setTimeout(stopMic, 1500); return true; }
+  return false;
+}
 function command(text, typed) {
   text = text.trim(); if (!text) return;
   $('heard').textContent = '“' + text + '”';
-  const t = text.toLowerCase().replace(/[.!?]/g, '');
+  const t = text.toLowerCase().replace(/[.!?,]/g, '').replace(/\s+/g, ' ').replace(/^(please|can you|could you|kacy) /, '').replace(/ (please|now|for me)$/, '');
+  if (deskVoice(t, typed)) return;
   // desk commands are handled instantly, without a round trip to Claude
   if (/^(stop|cancel|abort|halt)( everything| it| now)?$/.test(t)) return stopAll();
   if (/^(explode|expand|open (it )?up|pull (it )?apart|exploded view)/.test(t)) { setExplode(true); return say('Exploded view.', true); }
@@ -670,26 +879,35 @@ function stopAll() { endWork(); try { speechSynthesis.cancel(); } catch {} awake
 $('cmd').addEventListener('keydown', (e) => { if (e.key === 'Enter') { command(e.target.value, true); e.target.value = ''; } e.stopPropagation(); });
 $('stop').onclick = stopAll;
 $('boom').onclick = () => setExplode(cam.tExplode < 0.5);
-$('air').onclick = () => { $('air').classList.toggle('on'); if (AIR.down) { AIR.down = false; AIR.pinching = false; airSend({ c: 'u', x: AIR.x, y: AIR.y }); } };
+function setAir(on) { $('air').classList.toggle('on', on == null ? undefined : !!on); airRelease(); }
+$('air').onclick = () => setAir();
 $('ctl').onclick = () => { if (S.demo) { S.control = S.control === 'hands' ? 'eyes' : 'hands'; return renderTop(); } api('/api/control', { level: S.control === 'hands' ? 'eyes' : 'hands' }); };
 addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') stopAll();
+  if (e.target.closest && e.target.closest('input, select, textarea')) return;
+  if (e.key === 'Escape') { if ($('help').classList.contains('show') || $('panel').classList.contains('show')) { showHelp(false); showPanel(false); return; } stopAll(); }
   if (e.key === 'e' || e.key === 'E') setExplode(cam.tExplode < 0.5);
+  if (e.key === '[') setRail('L'); if (e.key === ']') setRail('R'); if (e.key === '?') showHelp();
   if (e.key === ' ') { e.preventDefault(); if (S.demo) return $('cmd').focus(); if (!micOn) startMic(false); awakeUntil = Date.now() + 9000; setState('listening'); micNote('▶ listening, go ahead'); }
 });
 
 /* ───────────────────────── hand gestures (MediaPipe, loaded only when switched on) ─────────────────────────
-   On the desk:  point with the index finger = move the pointer · quick pinch = press (select a part)
-                 pinch and hold, then move = orbit · two hands pinched, pull apart / push together = expand / shrink
-   On the Mac:   open hand swiped sideways = next / previous desktop · open hand held still = show all windows
-                 closed fist held = stop everything                                                             */
+   One pose = one job, so nothing depends on timing:
+     index finger = move · pinch = click · fist (grab) = hold the mouse down until the hand opens
+     three fingers = right click · two fingers = scroll · open hand = desktops / all windows
+   With the air mouse off the same poses work on the desk: grab = rotate, pinch = select, two fingers = zoom. */
 let handActive = false, handsOn = false, handLm = null, camStream = null, handTimer = 0;
 const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
-const camLbl = (t) => { if ($('camLbl').textContent !== t) $('camLbl').textContent = t; };
-$('hands').onclick = async () => {
-  if (S.demo) return say('Gestures need the camera, which works in the desktop app, not in this preview.', true);
-  if (handsOn) { if (AIR.down) { AIR.down = false; AIR.pinching = false; airSend({ c: 'u', x: AIR.x, y: AIR.y }); }
-    handsOn = false; handActive = false; pointer.on = false; hoverId = null; clearTimeout(handTimer); $('hands').classList.remove('on'); $('camBox').classList.remove('show'); camStream && camStream.getTracks().forEach((t) => t.stop()); return; }
+const camLbl = (t) => { if (camLblEl.textContent !== t) camLblEl.textContent = t; };
+function airRelease() { if (AIR.down) { AIR.down = false; AIR.grab = false; AIR.pinching = false; airSend({ c: 'u', x: AIR.x, y: AIR.y }); } }
+async function setHands(on) {
+  if (S.demo) { say('Gestures need the camera, which works in the desktop app, not in this preview.', true); return false; }
+  if (!on) {
+    if (!handsOn) return true;
+    airRelease(); handsOn = false; handActive = false; pointer.on = false; hoverId = null; clearTimeout(handTimer);
+    $('hands').classList.remove('on'); camShown(); camLbl('HANDS OFF · CLAP TWICE'); camStream && camStream.getTracks().forEach((t) => t.stop());
+    camFx.getContext('2d').clearRect(0, 0, camFx.width, camFx.height); return true;
+  }
+  if (handsOn) return true;
   try {
     camLbl('LOADING…'); $('camBox').classList.add('show');
     camStream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240, frameRate: 24 } });
@@ -699,21 +917,28 @@ $('hands').onclick = async () => {
       const fileset = await FilesetResolver.forVisionTasks(MP + '/wasm');
       handLm = await HandLandmarker.createFromOptions(fileset, { baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task', delegate: 'GPU' }, runningMode: 'VIDEO', numHands: 2 });
     }
-    handsOn = true; $('hands').classList.add('on'); camLbl('HANDS'); diag('gestures started'); handLoop();
-  } catch (err) { $('camBox').classList.remove('show'); diag('gestures failed: ' + err.message); say('Could not start hand tracking: ' + err.message + '. It needs camera permission and an internet connection the first time.', true); }
-};
-const dist2 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-// Turn 21 landmarks into a named hand pose. Sizes are relative to the palm, so distance from the camera does not matter.
-function readHand(lm, held) {
-  const size = dist2(lm[0], lm[9]) || 0.1, ext = (tip, pip) => dist2(lm[tip], lm[0]) > dist2(lm[pip], lm[0]) * 1.12;
-  const idx = ext(8, 6), mid = ext(12, 10), rng = ext(16, 14), pky = ext(20, 18), thumb = dist2(lm[4], lm[5]) / size > 0.55;
-  const pinch = dist2(lm[4], lm[8]) / size < (held ? PREF.pinch * 1.5 : PREF.pinch), n = idx + mid + rng + pky; // easier to keep a pinch than to start one
-  const pose = pinch ? 'pinch' : n === 4 && thumb ? 'palm' : idx && !mid && !rng && !pky ? 'point' : n === 0 ? 'fist' : 'other';
-  const two = idx && mid && !rng && !pky && !pinch, midPinch = !pinch && dist2(lm[4], lm[12]) / size < 0.3 && idx;
-  return { two, midPinch, kx: 1 - lm[5].x, ky: lm[5].y, pose, cx: 1 - lm[9].x, cy: lm[9].y, tipX: 1 - lm[8].x, tipY: lm[8].y, pinX: 1 - (lm[4].x + lm[8].x) / 2, pinY: (lm[4].y + lm[8].y) / 2 };
+    handsOn = true; PIP.dismissed = false; $('hands').classList.add('on'); camLbl('HANDS'); camShown(); diag('gestures started'); handLoop();
+    if (PREF.float) floatCam();
+    return true;
+  } catch (err) { camShown(); diag('gestures failed: ' + err.message); say('Could not start hand tracking: ' + err.message + '. It needs camera permission and an internet connection the first time.', true); return false; }
 }
-const AIR = { x: 0.5, y: 0.5, down: false, pinching: false, pinchAt: 0, pend: 0, inflight: 0, scrollY: null, rcool: 0 };
-const G = { missionAt: 0, pinchAt: 0, pinchStart: null, prevPinch: null, prevSpread: null, dragged: false, fistSince: 0, palmSince: 0, palmTrail: [], cool: 0, lost: 0 };
+$('hands').onclick = () => setHands(!handsOn);
+const dist2 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+// Turn 21 landmarks into one named pose. Sizes are relative to the palm, so distance from the camera does not matter.
+function readHand(lm, held) {
+  const size = dist2(lm[0], lm[9]) || 0.1, w = lm[0];
+  const ext = (tip, pip) => dist2(lm[tip], w) > dist2(lm[pip], w) * 1.12;   // finger straight out
+  const curled = (tip, mcp) => dist2(lm[tip], w) < dist2(lm[mcp], w) * 1.02; // fingertip folded back to the palm
+  const idx = ext(8, 6), mid = ext(12, 10), rng = ext(16, 14), pky = ext(20, 18), thumb = dist2(lm[4], lm[5]) / size > 0.55, n = idx + mid + rng + pky;
+  const tight = curled(8, 5) && curled(12, 9) && curled(16, 13) && curled(20, 17);
+  const touch = dist2(lm[4], lm[8]) / size;
+  const pinch = !tight && touch < (held ? PREF.pinch * 1.5 : PREF.pinch); // easier to keep a pinch than to start one
+  const fist = tight || n === 0 && !pinch && touch > PREF.pinch * 1.2;
+  const pose = fist ? 'fist' : pinch ? 'pinch' : n === 4 && thumb ? 'palm' : idx && mid && rng && !pky ? 'three' : idx && mid && !rng && !pky ? 'two' : idx && !mid && !rng && !pky ? 'point' : 'other';
+  return { pose, kx: 1 - lm[5].x, ky: lm[5].y, cx: 1 - lm[9].x, cy: lm[9].y, tipX: 1 - lm[8].x, tipY: lm[8].y, pinX: 1 - (lm[4].x + lm[8].x) / 2, pinY: (lm[4].y + lm[8].y) / 2 };
+}
+const AIR = { x: 0.5, y: 0.5, down: false, grab: false, pinching: false, pinchAt: 0, pend: 0, inflight: 0, scrollY: null, rcool: 0, fistN: 0, openN: 0, threeN: 0, flash: 0 };
+const G = { missionAt: 0, pinchAt: 0, pinchStart: null, prevSpread: null, dragged: false, palmSince: 0, palmTrail: [], cool: 0, lost: 0, grab: null, zoomY: null };
 const toScreen = (nx, ny) => [Math.max(0, Math.min(1, (nx - 0.15) / 0.7)) * W, Math.max(0, Math.min(1, (ny - 0.15) / 0.7)) * H]; // the middle 70% of the camera view reaches the whole screen
 function movePointer(nx, ny, down) { const [x, y] = toScreen(nx, ny); pointer.x += (x - pointer.x) * (pointer.on ? 0.45 : 1); pointer.y += (y - pointer.y) * (pointer.on ? 0.45 : 1); pointer.on = true; pointer.down = down; hoverId = partAt(pointer.x, pointer.y, 1.3); }
 // --- air mouse: the hand drives the real Mac cursor everywhere, not just inside the desk ---
@@ -726,77 +951,101 @@ function airMove(nx, ny) { // speed and steadiness come from the Controls panel
   const k = Math.min(0.9, (1 - PREF.smooth) * 0.5 + d * 7); // slow, small movements are smoothed; big ones follow straight away
   AIR.x += (tx - AIR.x) * k; AIR.y += (ty - AIR.y) * k; airSend({ c: 'm', x: AIR.x, y: AIR.y });
 }
-// A pinch is a CLICK when it is short: the cursor is frozen while you pinch so the click lands exactly where you aimed.
-// Keep the pinch closed past the hold time and it becomes a DRAG (select text, move a window, orbit the model).
+// Pinch = click. The cursor is frozen while you pinch so the click lands exactly where you aimed.
+// (Only in "hold the pinch" drag style does a long pinch turn into a drag.)
 function airPinch(pinched, h, now) {
   if (pinched !== AIR.pinching) { if (++AIR.pend < 2) return; AIR.pend = 0; AIR.pinching = pinched; // two frames in a row, so a flicker is not a click
     if (pinched) { AIR.pinchAt = now; AIR.px = h.kx; AIR.py = h.ky; }
-    else if (AIR.down) { AIR.down = false; airSend({ c: 'u', x: AIR.x, y: AIR.y }); camLbl('DROPPED'); }
+    else if (AIR.down) { airRelease(); camLbl('DROPPED'); }
     else { airSend({ c: 'c', x: AIR.x, y: AIR.y, n: 1 }); blip(1200, 40); camLbl('CLICK'); AIR.flash = now + 350; }
     return;
   }
   AIR.pend = 0;
-  if (!pinched) return;
+  if (!pinched || PREF.drag !== 'pinch') return;
   const moved = Math.hypot(h.kx - AIR.px, h.ky - AIR.py) > 0.035;
   if (!AIR.down && (now - AIR.pinchAt > PREF.hold || moved && now - AIR.pinchAt > 180)) { AIR.down = true; airSend({ c: 'd', x: AIR.x, y: AIR.y }); }
   if (AIR.down) { airMove(h.kx, h.ky); camLbl('DRAGGING · OPEN FINGERS TO DROP'); } else camLbl('PINCH · RELEASE TO CLICK');
 }
 function airHand(h, now) {
-  if (h.two) { if (AIR.pinching) airPinch(false, h, now); if (AIR.scrollY != null) { const dy = (h.ky - AIR.scrollY) * 70; if (Math.abs(dy) > 0.6) { airSend({ c: 's', dy: -dy }); AIR.scrollY = h.ky; } } else AIR.scrollY = h.ky; camLbl('SCROLL'); return; }
+  // GRAB: close the hand = mouse button down, move = drag / select, open the hand = let go
+  if (PREF.drag === 'grab') {
+    if (h.pose === 'fist') { AIR.openN = 0; if (!AIR.down && ++AIR.fistN >= 3) { AIR.down = AIR.grab = true; AIR.pinching = false; airSend({ c: 'd', x: AIR.x, y: AIR.y }); blip(700, 50); } }
+    else { AIR.fistN = 0; if (AIR.grab && ++AIR.openN >= 2) { airRelease(); camLbl('LET GO'); AIR.flash = now + 450; } }
+    if (AIR.grab) { airMove(h.kx, h.ky); camLbl('HOLDING · OPEN HAND TO LET GO'); return; }
+    if (h.pose === 'fist') { camLbl('GRAB…'); return; } // cursor stays still while the hand closes, so the drag starts where you aimed
+  }
+  if (h.pose === 'two') { if (AIR.pinching) airPinch(false, h, now); if (AIR.scrollY != null) { const dy = (h.ky - AIR.scrollY) * 70; if (Math.abs(dy) > 0.6) { airSend({ c: 's', dy: -dy }); AIR.scrollY = h.ky; } } else AIR.scrollY = h.ky; camLbl('SCROLL'); return; }
   AIR.scrollY = null;
-  if (h.midPinch && now > AIR.rcool) { AIR.rcool = now + 900; airSend({ c: 'r', x: AIR.x, y: AIR.y }); camLbl('RIGHT CLICK'); return; }
+  if (h.pose === 'three') { // cursor holds still; one right click per gesture
+    if (++AIR.threeN === 3 && now > AIR.rcool) { AIR.rcool = now + 900; airSend({ c: 'r', x: AIR.x, y: AIR.y }); blip(520, 70); AIR.flash = now + 600; camLbl('RIGHT CLICK'); }
+    else if (!(AIR.flash > now)) camLbl('THREE FINGERS · RIGHT CLICK');
+    return;
+  }
+  AIR.threeN = 0;
   const pinched = h.pose === 'pinch';
-  if (!pinched && !AIR.pinching) { airMove(h.kx, h.ky); if (!(AIR.flash > now)) camLbl('MOUSE · PINCH = CLICK, HOLD = DRAG'); }
+  if (!pinched && !AIR.pinching) { airMove(h.kx, h.ky); if (!(AIR.flash > now)) camLbl(PREF.drag === 'grab' ? 'MOUSE · PINCH = CLICK · GRAB = DRAG' : 'MOUSE · PINCH = CLICK, HOLD = DRAG'); }
   airPinch(pinched, h, now);
 }
 function macGesture(name, label) { G.cool = performance.now() + 1300; camLbl(label); api('/api/gesture', { name }).then((r) => r && r.error && r.error !== 'eyes only' && micNote('gesture: ' + r.error, true)); }
+function deskHand(h, now) { // air mouse off: the same poses act on the 3D desk
+  if (h.pose === 'fist') { // grab and turn the model
+    G.pinchStart = null; G.zoomY = null; cam.auto = false;
+    if (G.grab) { cam.yaw += (h.cx - G.grab.x) * 5.5; cam.pitch = Math.max(-0.1, Math.min(1.35, cam.pitch + (h.cy - G.grab.y) * 3.4)); camLbl('ROTATING · OPEN HAND TO LET GO'); } else camLbl('GRAB · MOVE TO ROTATE');
+    G.grab = { x: h.cx, y: h.cy }; pointer.on = false; return true;
+  }
+  G.grab = null;
+  if (h.pose === 'two') { // two fingers: up = zoom in, down = zoom out
+    if (G.zoomY != null) { cam.auto = false; cam.tDist = Math.max(7, Math.min(70, cam.tDist * (1 + (h.ky - G.zoomY) * 2.4))); }
+    G.zoomY = h.ky; camLbl('ZOOM · UP / DOWN'); pointer.on = false; return true;
+  }
+  G.zoomY = null;
+  if (h.pose === 'pinch') { // pinch = press; let go without moving = select the part under the pointer
+    if (!G.pinchStart) { G.pinchStart = { x: h.pinX, y: h.pinY }; G.pinchAt = now; G.dragged = false; }
+    movePointer(h.pinX, h.pinY, true);
+    if (Math.hypot(h.pinX - G.pinchStart.x, h.pinY - G.pinchStart.y) > 0.06) G.dragged = true;
+    camLbl('PRESS'); return true;
+  }
+  if (G.pinchStart && !G.dragged && now - G.pinchAt < 900) { const hit = partAt(pointer.x, pointer.y, 1.3); select(hit); camLbl(hit ? 'SELECTED' : 'CLEARED'); }
+  G.pinchStart = null;
+  if (h.pose === 'point') { movePointer(h.tipX, h.tipY, false); camLbl(hoverId ? 'POINT · PINCH TO SELECT' : 'POINT'); return true; }
+  return false;
+}
 function handLoop() {
   if (!handsOn) return;
   handTimer = setTimeout(handLoop, 55); // a timer, not animation frames, so tracking keeps running while the desk is behind other windows
   const video = $('cam'), now = performance.now(); if (video.readyState < 2) return;
   let res = null; try { res = handLm.detectForVideo(video, now); } catch { return; }
-  const g = $('camfx').getContext('2d'); g.clearRect(0, 0, 200, 150); g.save(); g.translate(200, 0); g.scale(-1, 1); g.globalAlpha = 0.35; g.drawImage(video, 0, 0, 200, 150); g.globalAlpha = 1;
+  const cw = camFx.width, ch = camFx.height, g = camFx.getContext('2d');
+  g.clearRect(0, 0, cw, ch); g.save(); g.translate(cw, 0); g.scale(-1, 1); g.globalAlpha = 0.4; g.drawImage(video, 0, 0, cw, ch); g.globalAlpha = 1;
   const raw = (res && res.landmarks) || [], hands = raw.map((lm, i) => readHand(lm, i === 0 && (AIR.pinching || !!G.pinchStart)));
-  raw.forEach((lm, i) => { g.fillStyle = { pinch: '#ffb547', palm: '#7dffb0', point: '#ffffff', fist: '#ff5468' }[hands[i].pose] || '#5fe3ff'; for (const p of lm) g.fillRect(p.x * 200 - 1.5, p.y * 150 - 1.5, 3, 3); });
+  const BONES = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [0, 17], [17, 18], [18, 19], [19, 20]];
+  raw.forEach((lm, i) => { const col = { pinch: '#ffb547', palm: '#7dffb0', point: '#ffffff', fist: '#ff5468', three: '#d58bff', two: '#5fe3ff' }[hands[i].pose] || '#5fe3ff';
+    g.strokeStyle = col; g.lineWidth = 1.5; g.beginPath(); for (const [a, b] of BONES) { g.moveTo(lm[a].x * cw, lm[a].y * ch); g.lineTo(lm[b].x * cw, lm[b].y * ch); } g.stroke();
+    g.fillStyle = col; for (const p of lm) g.fillRect(p.x * cw - 1.5, p.y * ch - 1.5, 3, 3); });
   g.restore();
-  const pinches = hands.filter((h) => h.pose === 'pinch'), point = hands.find((h) => h.pose === 'point'), palm = hands.find((h) => h.pose === 'palm');
-  handActive = pinches.length > 0 || !!point;
-  if (!hands.length) { if (++G.lost > 6) { pointer.on = false; hoverId = null; } camLbl('HANDS'); G.pinchStart = G.prevPinch = G.prevSpread = null; G.fistSince = G.palmSince = 0; G.palmTrail = []; return; }
+  if (!hands.length) { if (++G.lost > 6) { pointer.on = false; hoverId = null; } if (G.lost > 4 && AIR.grab) { airRelease(); camLbl('LET GO · HAND LOST'); } else if (!AIR.grab) camLbl('HANDS'); G.pinchStart = G.prevSpread = G.grab = G.zoomY = null; G.palmSince = 0; G.palmTrail = []; handActive = false; return; }
   G.lost = 0;
+  const pinches = hands.filter((h) => h.pose === 'pinch'), palm = hands.find((h) => h.pose === 'palm');
+  const main = hands.find((h) => h.pose !== 'palm' && h.pose !== 'other') || null;
+  handActive = !!main && main.pose !== 'two';
 
-  if (pinches.length === 2) { // two hands: pull apart to expand and come closer, push together to shrink
+  if (pinches.length === 2) { // two hands: pull apart to explode and come closer, push together to assemble
     const d = Math.hypot(pinches[0].pinX - pinches[1].pinX, pinches[0].pinY - pinches[1].pinY);
     if (G.prevSpread != null) { const dv = d - G.prevSpread; cam.tExplode = Math.max(0, Math.min(1, cam.tExplode + dv * 3.2)); cam.auto = false; cam.tDist = Math.max(7, Math.min(70, cam.tDist * (1 - dv * 1.3))); $('boom').classList.toggle('on', cam.tExplode > 0.5); }
-    G.prevSpread = d; G.prevPinch = G.pinchStart = null; pointer.on = false; camLbl('EXPAND / SHRINK'); if (AIR.down) { AIR.down = false; AIR.pinching = false; airSend({ c: 'u', x: AIR.x, y: AIR.y }); }
-  } else if (airOn() && (pinches.length === 1 || point || hands.some((h) => h.two || h.midPinch))) { // the real cursor follows the hand
-    G.pinchStart = G.prevPinch = G.prevSpread = null; pointer.on = false; hoverId = null;
-    airHand(pinches[0] || point || hands.find((h) => h.two || h.midPinch), now);
-  } else if (pinches.length === 1) { // one hand: a quick pinch is a press, a held pinch that moves is an orbit
-    const p = pinches[0]; G.prevSpread = null;
-    if (!G.pinchStart) { G.pinchStart = { x: p.pinX, y: p.pinY }; G.pinchAt = now; G.dragged = false; }
-    movePointer(p.pinX, p.pinY, true);
-    if (Math.hypot(p.pinX - G.pinchStart.x, p.pinY - G.pinchStart.y) > 0.05) G.dragged = true;
-    if (G.dragged && G.prevPinch) { cam.yaw += (p.pinX - G.prevPinch.x) * 4.5; cam.pitch = Math.max(-0.1, Math.min(1.35, cam.pitch + (p.pinY - G.prevPinch.y) * 3)); camLbl('ORBIT'); } else camLbl('PRESS');
-    G.prevPinch = { x: p.pinX, y: p.pinY };
-  } else {
-    if (G.pinchStart && !G.dragged && now - G.pinchAt < 700) { const hit = partAt(pointer.x, pointer.y, 1.3); select(hit); camLbl(hit ? 'SELECTED' : 'CLEARED'); } // pinch released without moving = press
-    G.pinchStart = G.prevPinch = G.prevSpread = null;
-    if (point) { movePointer(point.tipX, point.tipY, false); camLbl(hoverId ? 'POINT · PINCH TO PRESS' : 'POINT'); }
-    else { pointer.on = false; hoverId = null; if (AIR.down) { AIR.down = false; AIR.pinching = false; airSend({ c: 'u', x: AIR.x, y: AIR.y }); } }
+    G.prevSpread = d; G.pinchStart = null; pointer.on = false; camLbl('EXPAND / SHRINK'); airRelease(); return;
   }
+  G.prevSpread = null;
+  if (airOn()) { pointer.on = false; hoverId = null; if (main) airHand(main, now); else if (AIR.grab && ++AIR.openN >= 2) airRelease(); }
+  else if (!(main && deskHand(main, now))) { pointer.on = false; hoverId = null; }
 
-  // open hand: sideways swipe = switch desktop, held still = show all windows
-  if (palm && !pinches.length && now > G.cool) {
+  // open hand (not while holding anything): sideways swipe = switch desktop, held still = show all windows
+  if (palm && !main && !AIR.down && now > G.cool) {
     G.palmTrail.push({ x: palm.cx, t: now }); while (G.palmTrail.length && now - G.palmTrail[0].t > 450) G.palmTrail.shift();
     const dx = palm.cx - G.palmTrail[0].x, moving = Math.abs(dx) > 0.06;
     if (Math.abs(dx) > 0.32) { G.palmTrail = []; G.palmSince = 0; macGesture(dx < 0 ? 'next' : 'prev', dx < 0 ? 'NEXT DESKTOP ▶' : '◀ PREVIOUS DESKTOP'); }
     else if (moving) G.palmSince = 0;
-    else { if (!G.palmSince) G.palmSince = now; else if (now - G.palmSince > 900) { G.palmSince = 0; macGesture('mission', 'ALL WINDOWS'); G.cool = now + 2500; G.missionAt = now; } else if (!point) camLbl('OPEN HAND · HOLD / SWIPE'); }
+    else { if (!G.palmSince) G.palmSince = now; else if (now - G.palmSince > 900) { G.palmSince = 0; macGesture('mission', 'ALL WINDOWS · PINCH ONE'); G.cool = now + 2500; } else camLbl('OPEN HAND · HOLD / SWIPE'); }
   } else { G.palmTrail = []; G.palmSince = 0; }
-
-  // closed fist held = stop
-  if (hands.every((h) => h.pose === 'fist') && G.missionAt && now - G.missionAt < 60000) { if (now - G.missionAt > 700) { G.missionAt = 0; G.fistSince = now + 2500; macGesture('back', 'BACK TO YOUR WINDOW'); } }
-  else if (hands.every((h) => h.pose === 'fist')) { camLbl('FIST · HOLD TO STOP'); if (!G.fistSince) G.fistSince = now; else if (now - G.fistSince > 1100) { G.fistSince = now + 2500; stopAll(); camLbl('STOPPED'); } } else G.fistSince = 0;
 }
 
 /* ───────────────────────── engine link ───────────────────────── */
@@ -826,7 +1075,7 @@ function onEvent({ type, data }) {
   }
 }
 async function boot() {
-  requestAnimationFrame(frame);
+  requestAnimationFrame(frame); setTimeout(() => showSys(PREF.sys), 400);
   try { const r = await fetch('/api/state'); if (!r.ok) throw 0; const st = await r.json(); S.build = st.build; applyState(st); es = new EventSource('/events'); es.onmessage = (m) => onEvent(JSON.parse(m.data)); startMic(true); if (PREF.clap) startClap(); }
   catch { startDemo(); }
 }

@@ -28,18 +28,34 @@ browser). Pick a project from the hangar (top left), then say "Kacy, ..." or typ
 
 - Voice: "Kacy, add a retriever agent between the encoder and the LLM" / "Kacy, look at my screen,
   what is this error?" / "Kacy, continue the training at 5 pm" / "Kacy, stop".
-- Instant desk commands: explode, assemble, zoom in, zoom out, reset view, run mode, stop.
-- Air mouse (button in the top bar, on by default with gestures): your hand moves the real Mac
-  cursor in every app. Index finger up = move. Pinch thumb and index = click; keep pinching and
-  move = drag. Thumb to middle finger = right click. Index and middle up, move up/down = scroll.
-  Inside the desk the same pinch selects parts and drags the model. Air mouse off = a pointer that
-  lives only inside the desk.
-- Two hands pinched, pull apart / push together = expand / shrink the model.
-- Open hand swiped sideways = next / previous desktop. Open hand held still = all windows; close
-  the hand into a fist afterwards = back to the window you were in. Fist held (otherwise) = stop.
-  These need "Hands: on", Accessibility permission for Terminal, and the Kacy window left open.
+- Instant desk commands (no model, no delay), by voice or typed: explode, assemble, zoom in / out,
+  top / front / side view, rotate left / right, spin on / off, enable / disable air mouse,
+  gestures on / off, air mouse faster / slower, hide / show panels ("hide the left panel",
+  "focus mode"), show / hide help, open / close controls, show / hide CPU, "how is my CPU",
+  float the camera, stop listening, stop.
+- Air mouse (on by default with gestures): your hand moves the real Mac cursor in every app.
+  One pose = one job, nothing depends on timing:
+
+  | Pose | Does |
+  |---|---|
+  | index finger up | move the cursor |
+  | pinch thumb and index | click (twice fast = double click) |
+  | close your hand (grab) | hold the mouse button down: move to select text, drag a window, turn the desk; open the hand to let go |
+  | three fingers up | right click |
+  | two fingers up | scroll, move up or down |
+  | open hand, swipe / hold | next or previous desktop / all windows |
+
+  Prefer the old way? Controls > "Drag and select with" > "Hold the pinch".
+- Air mouse off, the same poses work on the desk: grab = rotate, pinch = select a part, two
+  fingers up / down = zoom, both hands pinched = explode / assemble.
+- Floating camera: while gestures are on, the camera preview floats above every app and tab
+  (Chrome picture-in-picture). Chrome needs one click or key press on the desk to open it.
+- The side panels minimize to thin edge tabs (arrow in each panel header, or the [ and ] keys).
+  A tab lights up when new activity arrives. Gesture and voice help lives behind the ? button.
+- The bottom bar shows Mac CPU, memory (the figure Activity Monitor uses), and what Kacy and her
+  brain processes use. Say "hide CPU" to remove it.
 - Mouse: drag to orbit, scroll to zoom, click a part to inspect, double-click to explode.
-- Keys: E explode, Space talk, Esc stop.
+- Keys: E explode, Space talk, [ and ] panels, ? help, Esc stop.
 - "Hands: on / Eyes only" switches whether Kacy may use the mouse and keyboard.
 
 ## The no-delete rule
@@ -88,6 +104,9 @@ Voice, gesture and brain errors are written to `kacy.log` in this folder.
   running a command), with a timer. The same lines go to `kacy.log`.
 - After Kacy speaks, the microphone stays open for a few seconds so you can reply without the
   wake word.
+- Speech recognition uses Indian English. If Chrome's speech service cannot be reached, Kacy
+  retries with growing pauses (1s up to 30s) instead of twice a second, and switches to Chrome's
+  on-device recognition when the Mac supports it.
 - To use a faster or different model, add `"model": "<name>"` to `~/.kacy/config.json`.
 
 ## Two lanes, two models
@@ -106,12 +125,12 @@ four idle minutes to give memory back. Say "think hard about ..." to force the s
 "quickly ..." for the small one.
 
 **Controls** (top bar) holds the model for each lane, the routing mode, air-mouse speed,
-steadiness, pinch sensitivity, hold-to-drag time, and the clap switch. If a model name is not
+steadiness, pinch sensitivity, drag style, the floating camera, and the clap switch. If a model name is not
 accepted by your Claude Code, that lane falls back to your default and says so.
 
 ## Clap and air mouse
 
 - Double clap = gestures and air mouse on or off (uses the microphone; tune loudness in Controls).
-- Quick pinch = click. The cursor freezes while you pinch, so the click lands where you aimed.
-  Two quick pinches = double click. Pinch and hold = drag; open your fingers to drop.
+- Pinch = click. The cursor freezes while you pinch, so the click lands where you aimed.
+  Two quick pinches = double click. Grab (close your hand) = drag; open it to drop.
 - Or say "click", "double click", "right click" to click wherever the cursor is.
